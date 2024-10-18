@@ -11,7 +11,7 @@ A ReaScript made to preview custom Guitar Hero Live Charts
 7. Optionally, add a keybind, or use the Menu Editor to add the action to a menu
 
 ## Additional notes:
-For a better experience, use the included color map and note names!
+For a better experience, use the included color map and note names!  
 Guitar events (106 to 114 and 118) are exclusive for Guitar Hero Live.
 
 ## Modified by GHCripto:

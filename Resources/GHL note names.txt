@@ -1,0 +1,58 @@
+# MIDI note/CC name map
+119 ----
+118 Highway Down
+117 ----
+116 Hero Power
+115 ----
+114 Guitar_Distorted
+113 Guitar_Crunch
+112 Guitar_Clean
+111 Guitar_Acoustic
+110 Bass
+109 Banjo
+108 Keys
+107 Piano
+106 Sitar
+105 ----
+104 Taps
+103 Solo
+102 Force Strum
+101 Force HOPO
+100 Expert Black 3
+99 Expert Black 2
+98 Expert Black 1
+97 Expert White 3
+96 Expert White 2
+95 Expert White 1
+94 Open
+93 ----
+90 Force Strum
+89 Force HOPO
+88 Hard Black 3
+87 Hard Black 2
+86 Hard Black 1
+85 Hard White 3
+84 Hard White 2
+83 Hard White 1
+82 Open
+81 ----
+78 Force Strum
+77 Force HOPO
+76 Medium Black 3
+75 Medium Black 2
+74 Medium Black 1
+73 Medium White 3
+72 Medium White 2
+71 Medium White 1
+70 Open
+69 ----
+66 Force Strum
+65 Force HOPO
+64 Easy Black 3
+63 Easy Black 2
+62 Easy Black 1
+61 Easy White 3
+60 Easy White 2
+59 Easy White 1
+58 Open
+57 ----

@@ -16,6 +16,7 @@ This new version includes:
   In the lyrics display, to avoid using spaces or hyphens (which you missed when charting), the following will not be displayed:
   - The syllable-connecting hyphen **"-"**
   - The plus sign **"+"** that connects notes
+  - the toneless letter/note marker **"#"**
   - The equal sign **"="**, which acts as a hyphen **"-"** in some cases, will be displayed as a hyphen in the display.
   
   Lyrics marked as pitchless **"#"** will be displayed in white.  

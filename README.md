@@ -1,7 +1,7 @@
 # GHL-Preview
 A ReaScript made to preview custom Guitar Hero Live Charts
 
-# Version 1.0
+# Version 1.1
 This new version includes:
 - Buttons to switch between difficulties
 - Button to increase/decrease highway speed
@@ -9,6 +9,7 @@ This new version includes:
 - Lyrics visualizer: Button to toggle the lyrics display on/off
 - Vocal HUD: Button to toggle the vocal HUD (GHL style)
 - Visual indicator when hitting a note in the Vocal HUD
+- Visual indicator of which **Section** you are in (requires the **EVENTS** track)
 - Future notes are now drawn behind, not above, the first, giving a sense of depth
 - Shortcuts to toggle the lyrics display and vocal HUD on/offs
 
@@ -19,10 +20,11 @@ This new version includes:
   - the toneless letter/note marker **"#"**
   - The equal sign **"="**, which acts as a hyphen **"-"** in some cases, will be displayed as a hyphen in the display.
   
-  Lyrics marked as pitchless **"#"** will be displayed in white.  
+  Lyrics marked as pitchless **"#"** will be displayed in **white**.  
+  Lyrics marked as Star Power / Hero Power will be displayed in **yellow**.  
   Notes **26** and **29**, as well as notes marked as pitchless **"#"**, will be vertically centered in the vocal HUD (as in GHL).
 
-![image](https://github.com/user-attachments/assets/27ec277e-dcd1-45b4-abe1-7d49f43435f4)
+![image](https://github.com/user-attachments/assets/1c5af98d-c0bd-4497-a879-1089664d07ab)
 
 ## Installation instructions:
 1. Download .zip of repository

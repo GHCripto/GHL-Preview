@@ -1,4 +1,4 @@
-version_num="1.0"
+version_num="1.1"
 imgScale=1024/1024
 diffNames={"Easy","Medium","Hard","Expert"}
 movequant=10
@@ -41,12 +41,17 @@ local textColorSung = {r = 0.3, g = 0.6, b = 1.0, a = 1.0}  -- Azul claro para l
 local bgColorLyrics = {r = 0.15, g = 0.15, b = 0.25, a = 0.8}   -- Fondo para letras
 
 -- Color para la próxima frase (notas con tono)
-local textColorNextPhrase = {r = 0.55, g = 0.9, b = 0.55, a = 1.0}  -- Verde más claro para próxima frase
+local textColorNextPhrase = {r = 0.45, g = 1.0, b = 0.45, a = 1.0}  -- Verde más claro para próxima frase
 
 -- Color para letras sin tono (marcadas con #)
 local textColorToneless = {r = 0.55, g = 0.55, b = 0.55, a = 1.0}  -- Gris para letras sin tono
 local textColorTonelessActive = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}  -- Blanco puro para letras sin tono activas
 local textColorTonelessSung = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}  -- Blanco puro para letras sin tono ya cantadas
+
+-- Colores en la sección de colores al inicio del script
+local textColorHeroPower = {r = 1.0, g = 1.0, b = 0.5, a = 1.0}        -- Amarillo para letras con Hero Power
+local textColorHeroPowerActive = {r = 1.0, g = 1.0, b = 0.0, a = 1.0}  -- Amarillo brillante para letras Hero Power activas
+local textColorHeroPowerSung = {r = 1.0, g = 1.0, b = 0.0, a = 1.0}    -- Amarillo más oscuro para letras Hero Power ya cantadas
 
 -- Variables configurables para ajustar la posición y tamaño del visualizador de letras
 local lyricsConfig = {
@@ -59,6 +64,23 @@ local lyricsConfig = {
         current = 22,       -- Tamaño para frase actual
         next = 20           -- Tamaño para próxima frase
     }
+}
+
+-- Variables para el visualizador de secciones
+local eventsTrack = nil
+local sections = {}
+local currentSection = 1
+local eventsHash = "" -- Detecta cambios en la pista EVENTS
+local showSections = true  -- Controla si se muestra el visualizador de secciones
+local sectionDisplayConfig = {
+    width = 150,              -- Ancho del recuadro de sección
+    height = 40,              -- Altura del recuadro
+    xOffset = 20,             -- Posición X desde el borde izquierdo
+    yOffset = 280,            -- Posición Y desde arriba
+    bgColor = {r = 0.15, g = 0.15, b = 0.25, a = 0.9},  -- Color de fondo
+    textColor = {r = 0.9, g = 0.9, b = 1.0, a = 1.0},   -- Color del texto
+    fontSize = 20,            -- Tamaño de la fuente
+    fadeTime = 2.0            -- Tiempo en segundos antes de la siguiente sección para empezar a desvanecer
 }
 
 -- Detecta cambios en la pista de voces
@@ -422,7 +444,7 @@ function handleMouseClick(x, y)
         showNotesHUD = not showNotesHUD
         return true
     end
-    
+
     return false
 end
 
@@ -649,6 +671,11 @@ function resetState()
     phrases = {}
     beatLines = {}
     
+	eventsTrack = nil
+	sections = {}
+	currentSection = 1
+	eventsHash = ""
+
     -- Reiniciar estados
     curNote = 1
     curBeatLine = 1
@@ -706,8 +733,8 @@ function createPhrase(startTime, endTime)
     }
 end
 
--- Estructura para una sílaba o palabra
-function createLyric(text, startTime, endTime, pitch)
+-- Función completa createLyric con soporte para Hero Power
+function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     -- Procesar el texto
     local processedText = text
     local originalText = text  -- Guardar el texto original para referencia
@@ -755,11 +782,14 @@ function createLyric(text, startTime, endTime, pitch)
     -- Eliminar todos los símbolos +
     processedText = processedText:gsub("%+", "")
     
-    -- Eliminar todos los símbolos +
+    -- Eliminar el nombre de la pista
     processedText = processedText:gsub("PART VOCALS", "")
     
-    -- Eliminar todos los símbolos +
-    processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (si es el caso, de quién hizo el chart, en este caso: YO, GHCripto)
+    -- Eliminar el nombre del charter de la pista
+    -- processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
+    
+    -- Eliminar todo el texto entre corchetes, incluyendo los corchetes
+    processedText = processedText:gsub("%[.-%]", "")
     
     -- Eliminar guiones originales (que no eran =)
     -- Hacer esto carácter por carácter para preservar los guiones que eran =
@@ -774,6 +804,9 @@ function createLyric(text, startTime, endTime, pitch)
     end
     processedText = result
     
+    -- Elimina espacios extras que pudieran quedar después de eliminar el texto entre corchetes
+    processedText = processedText:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+    
     -- Crear y devolver la estructura de datos
     return {
         originalText = originalText,
@@ -786,7 +819,8 @@ function createLyric(text, startTime, endTime, pitch)
         -- Usar los resultados del análisis de conectores
         endsWithHyphen = connectsWithNext,
         beginsWithHyphen = connectsWithPrevious,
-        pitch = pitch or 0  -- Nuevo campo para el tono (pitch)
+        pitch = pitch or 0,
+        hasHeroPower = hasHeroPower or false  -- Hero Power
     }
 end
 
@@ -848,13 +882,16 @@ end
 -- Función para encontrar la pista PART VOCALS
 function findVocalsTrack()
     vocalsTrack = findTrack("PART VOCALS")
-    if not vocalsTrack then
-        vocalsTrack = findTrack("PART VOCAL")  -- Alternativa (poco frecuente realmente)
-    end
     return vocalsTrack ~= nil
 end
 
--- Función para parsear eventos de letras
+-- Función para encontrar la pista EVENTS
+function findEventsTrack()
+    eventsTrack = findTrack("EVENTS")
+    return eventsTrack ~= nil
+end
+
+-- Función para parsear eventos de letras/Hero Power
 function parseVocals()
     phrases = {}
     
@@ -894,6 +931,17 @@ function parseVocals()
             
             local _, noteCount, _, textSysexCount = reaper.MIDI_CountEvts(take)
             -- reaper.ShowConsoleMsg("Item " .. i .. ": " .. noteCount .. " notas, " .. textSysexCount .. " eventos de texto\n")
+            
+            -- NUEVO: Recolectar todas las notas de Hero Power
+            local heroPowerNotes = {}
+            for n = 0, noteCount-1 do
+                local _, _, _, noteStartppq, noteEndppq, _, pitch, _ = reaper.MIDI_GetNote(take, n)
+                if pitch == HP then
+                    local noteStartTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteStartppq)
+                    local noteEndTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteEndppq)
+                    table.insert(heroPowerNotes, {startTime = noteStartTime, endTime = noteEndTime})
+                end
+            end
             
             -- Busca los marcadores de frases
             for j = 0, noteCount-1 do
@@ -974,11 +1022,24 @@ function parseVocals()
 				
 				for k, phrase in ipairs(phrases) do
 					if event.time >= phrase.startTime and event.time <= phrase.endTime then
+                        -- MODIFICADO: Comprobar si este evento coincide con alguna nota Hero Power
+                        local hasHeroPower = false
+                        for _, hpNote in ipairs(heroPowerNotes) do
+                            -- Comprobar si el evento está dentro del rango de la nota Hero Power
+                            -- o muy cercano a su inicio (con un margen de tolerancia mayor)
+                            if (event.time >= hpNote.startTime and event.time <= hpNote.endTime) or
+                               math.abs(event.time - hpNote.startTime) < 0.03 then
+                                hasHeroPower = true
+                                break
+                            end
+                        end
+                        
 						table.insert(phrase.lyrics, createLyric(
 							event.text,
 							event.time,
 							event.endTime,
-							event.pitch  -- Incluir el pitch (tono)
+							event.pitch,
+							hasHeroPower  -- Pasar el flag de Hero Power
 						))
 						assignedToPhrase = true
 						break
@@ -1003,11 +1064,24 @@ function parseVocals()
                         end
                     end
                     
+                    -- MODIFICADO: Comprobar si este evento coincide con alguna nota Hero Power
+                    local hasHeroPower = false
+                    for _, hpNote in ipairs(heroPowerNotes) do
+                        -- Comprobar si el evento está dentro del rango de la nota Hero Power
+                        -- o muy cercano a su inicio (con un margen de tolerancia mayor)
+                        if (event.time >= hpNote.startTime and event.time <= hpNote.endTime) or
+                           math.abs(event.time - hpNote.startTime) < 0.03 then
+                            hasHeroPower = true
+                            break
+                        end
+                    end
+                    
 					table.insert(phrases[closestPhrase].lyrics, createLyric(
 						event.text,
 						event.time,
 						event.endTime,
-						event.pitch  -- Incluir el pitch (tono)
+						event.pitch,
+						hasHeroPower  -- Pasar el flag de Hero Power
 					))
 				end
 			end
@@ -1171,7 +1245,7 @@ function drawLyricsVisualizer()
 			
 			-- Encontrar la primera y última nota con pitch en la frase
 			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 then
+				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
 					if not firstNoteIndex then
 						firstNoteIndex = i
 					end
@@ -1186,7 +1260,7 @@ function drawLyricsVisualizer()
 			
 			-- Construir las cadenas de notas conectadas
 			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 then
+				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
 					if lyric.originalText:match("^%+") then
 						-- Esta es una nota conectora, buscar su nota anterior
 						local foundPrev = false
@@ -1220,7 +1294,7 @@ function drawLyricsVisualizer()
 			
 			-- Primero, verificar qué cadenas tienen al menos un elemento tocando el recogedor
 			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 then
+				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
 					local startTime = lyric.startTime
 					local endTime = lyric.endTime
 					local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((startTime - curBeat) / 4.0)
@@ -1277,7 +1351,7 @@ function drawLyricsVisualizer()
 			
 			for _, lyric in ipairs(phrase.lyrics) do
 				-- Solo dibujar si tiene pitch (tono) y no es toneless (sin tono)
-				if lyric.pitch and lyric.pitch > 0 then
+				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
 					-- Calcular posición Y basada en el pitch
 					local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
 					local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
@@ -1525,100 +1599,113 @@ function drawLyricsVisualizer()
     gfx.drawstr(titleText)
     
     -- Función para renderizar una frase con los espacios correctos
-    local function renderPhrase(phrase, font_size, y_pos, alpha_mult)
-        if #phrase.lyrics == 0 then
-            gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, alpha_mult or 1
-            gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
-            local noLyricsText = "[No lyrics found]"
-            local textW, _ = gfx.measurestr(noLyricsText)
-            gfx.x, gfx.y = (gfx.w - textW) / 2, y_pos
-            gfx.drawstr(noLyricsText)
-            return
-        end
-        
-        -- Primero, agrupa las letras basándose en conectores
-        local word_groups = {}
-        local current_group = {}
-        
-        for i, lyric in ipairs(phrase.lyrics) do
-            table.insert(current_group, lyric)
-            
-            -- Si esta letra no termina con guion, o es la última letra de la frase,
-            -- cierra el grupo actual y comienza uno nuevo
-            if not lyric.endsWithHyphen or i == #phrase.lyrics then
-                table.insert(word_groups, current_group)
-                current_group = {}
-            end
-        end
-        
-        -- Ahora calcular el ancho total incluyendo espacios entre palabras
-        gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
-        local spaceWidth = gfx.measurestr(" ")
-        local totalWidth = 0
-        
-        for i, group in ipairs(word_groups) do
-            for _, lyric in ipairs(group) do
-                local textW, _ = gfx.measurestr(lyric.text)
-                totalWidth = totalWidth + textW
-            end
-            
-            -- Añadir espacio después de cada grupo excepto el último
-            if i < #word_groups then
-                totalWidth = totalWidth + spaceWidth
-            end
-        end
-        
-        -- Dibujar los grupos de palabras
-        local startX = (gfx.w - totalWidth) / 2
-        
-        for i, group in ipairs(word_groups) do
-            for j, lyric in ipairs(group) do
-                local textW, _ = gfx.measurestr(lyric.text)
-                
-                -- Establecer color basado en el estado y si es sin tono
-                if lyric.isToneless then
-                    -- Letra sin tono (marcada con #)
-                    if lyric.isActive then
-                        -- Activa: gris más claro
-                        gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessActive.r, textColorTonelessActive.g, textColorTonelessActive.b, textColorTonelessActive.a * (alpha_mult or 1)
-                    elseif lyric.hasBeenSung then
-                        -- Cantada: gris azulado
-                        gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessSung.r, textColorTonelessSung.g, textColorTonelessSung.b, textColorTonelessSung.a * (alpha_mult or 1)
-                    else
-                        -- Inactiva: gris
-                        gfx.r, gfx.g, gfx.b, gfx.a = textColorToneless.r, textColorToneless.g, textColorToneless.b, textColorToneless.a * (alpha_mult or 1)
-                    end
-                else
-                    -- Letra normal (con tono)
-                    if lyric.isActive then
-                        -- Activa: azul intenso
-                        gfx.r, gfx.g, gfx.b, gfx.a = textColorActive.r, textColorActive.g, textColorActive.b, textColorActive.a * (alpha_mult or 1)
-                    elseif lyric.hasBeenSung then
-                        -- Cantada: azul claro
-                        gfx.r, gfx.g, gfx.b, gfx.a = textColorSung.r, textColorSung.g, textColorSung.b, textColorSung.a * (alpha_mult or 1)
-                    else
-                        -- Inactiva: verde normal o verde claro según si es próxima frase
-                        if alpha_mult and alpha_mult < 1.0 then
-                            -- Es la próxima frase (alpha_mult siempre es 0.9 para la próxima frase)
-                            gfx.r, gfx.g, gfx.b, gfx.a = textColorNextPhrase.r, textColorNextPhrase.g, textColorNextPhrase.b, textColorNextPhrase.a * (alpha_mult or 1)
-                        else
-                            -- Es la frase actual
-                            gfx.r, gfx.g, gfx.b, gfx.a = textColorInactive.r, textColorInactive.g, textColorInactive.b, textColorInactive.a * (alpha_mult or 1)
-                        end
-                    end
-                end
-                
-                gfx.x, gfx.y = startX, y_pos
-                gfx.drawstr(lyric.text)
-                startX = startX + textW
-            end
-            
-            -- Añadir espacio después de cada grupo excepto el último
-            if i < #word_groups then
-                startX = startX + spaceWidth
-            end
-        end
-    end
+	local function renderPhrase(phrase, font_size, y_pos, alpha_mult)
+		if #phrase.lyrics == 0 then
+			gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, alpha_mult or 1
+			gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
+			local noLyricsText = "[No lyrics found]"
+			local textW, _ = gfx.measurestr(noLyricsText)
+			gfx.x, gfx.y = (gfx.w - textW) / 2, y_pos
+			gfx.drawstr(noLyricsText)
+			return
+		end
+		
+		-- Primero, agrupa las letras basándose en conectores
+		local word_groups = {}
+		local current_group = {}
+		
+		for i, lyric in ipairs(phrase.lyrics) do
+			table.insert(current_group, lyric)
+			
+			-- Si esta letra no termina con guion, o es la última letra de la frase,
+			-- cierra el grupo actual y comienza uno nuevo
+			if not lyric.endsWithHyphen or i == #phrase.lyrics then
+				table.insert(word_groups, current_group)
+				current_group = {}
+			end
+		end
+		
+		-- Ahora calcular el ancho total incluyendo espacios entre palabras
+		gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
+		local spaceWidth = gfx.measurestr(" ")
+		local totalWidth = 0
+		
+		for i, group in ipairs(word_groups) do
+			for _, lyric in ipairs(group) do
+				local textW, _ = gfx.measurestr(lyric.text)
+				totalWidth = totalWidth + textW
+			end
+			
+			-- Añadir espacio después de cada grupo excepto el último
+			if i < #word_groups then
+				totalWidth = totalWidth + spaceWidth
+			end
+		end
+		
+		-- Dibujar los grupos de palabras
+		local startX = (gfx.w - totalWidth) / 2
+		
+		for i, group in ipairs(word_groups) do
+			for j, lyric in ipairs(group) do
+				local textW, _ = gfx.measurestr(lyric.text)
+				
+				-- Establecer color basado en el estado, si es sin tono o si tiene Hero Power
+				if lyric.hasHeroPower then
+					-- Letra con Hero Power
+					if lyric.isActive then
+						-- Activa: amarillo brillante
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerActive.r, textColorHeroPowerActive.g, textColorHeroPowerActive.b, textColorHeroPowerActive.a * (alpha_mult or 1)
+					elseif lyric.hasBeenSung then
+						-- Cantada: amarillo más oscuro
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerSung.r, textColorHeroPowerSung.g, textColorHeroPowerSung.b, textColorHeroPowerSung.a * (alpha_mult or 1)
+					else
+						-- Inactiva: amarillo normal
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPower.r, textColorHeroPower.g, textColorHeroPower.b, textColorHeroPower.a * (alpha_mult or 1)
+					end
+				elseif lyric.isToneless then
+					-- Letra sin tono (marcada con #)
+					if lyric.isActive then
+						-- Activa: gris más claro
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessActive.r, textColorTonelessActive.g, textColorTonelessActive.b, textColorTonelessActive.a * (alpha_mult or 1)
+					elseif lyric.hasBeenSung then
+						-- Cantada: gris azulado
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessSung.r, textColorTonelessSung.g, textColorTonelessSung.b, textColorTonelessSung.a * (alpha_mult or 1)
+					else
+						-- Inactiva: gris
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorToneless.r, textColorToneless.g, textColorToneless.b, textColorToneless.a * (alpha_mult or 1)
+					end
+				else
+					-- Letra normal (con tono)
+					if lyric.isActive then
+						-- Activa: azul intenso
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorActive.r, textColorActive.g, textColorActive.b, textColorActive.a * (alpha_mult or 1)
+					elseif lyric.hasBeenSung then
+						-- Cantada: azul claro
+						gfx.r, gfx.g, gfx.b, gfx.a = textColorSung.r, textColorSung.g, textColorSung.b, textColorSung.a * (alpha_mult or 1)
+					else
+						-- Inactiva: verde normal o verde claro según si es próxima frase
+						if alpha_mult and alpha_mult < 1.0 then
+							-- Es la próxima frase (alpha_mult siempre es 0.9 para la próxima frase)
+							gfx.r, gfx.g, gfx.b, gfx.a = textColorNextPhrase.r, textColorNextPhrase.g, textColorNextPhrase.b, textColorNextPhrase.a * (alpha_mult or 1)
+						else
+							-- Es la frase actual
+							gfx.r, gfx.g, gfx.b, gfx.a = textColorInactive.r, textColorInactive.g, textColorInactive.b, textColorInactive.a * (alpha_mult or 1)
+						end
+					end
+				end
+				
+				gfx.x, gfx.y = startX, y_pos
+				gfx.drawstr(lyric.text)
+				startX = startX + textW
+			end
+			
+			-- Añadir espacio después de cada grupo excepto el último
+			if i < #word_groups then
+				startX = startX + spaceWidth
+			end
+		end
+	end
+
     
     -- Dibujar la frase actual con tamaño ajustado
     if currentPhraseObj then
@@ -1664,6 +1751,139 @@ function updateAndDrawLyrics()
     
     -- Dibujar el visualizador de letras
     drawLyricsVisualizer()
+end
+
+
+-- Función para parsear los eventos de sección de la pista EVENTS
+function parseSections()
+    sections = {}
+    
+    if not eventsTrack then
+        if not findEventsTrack() then
+            return false
+        end
+    end
+    
+    local numItems = reaper.CountTrackMediaItems(eventsTrack)
+    local currentHash = ""
+    
+    for i = 0, numItems-1 do
+        local item = reaper.GetTrackMediaItem(eventsTrack, i)
+        local take = reaper.GetActiveTake(item)
+        
+        if reaper.TakeIsMIDI(take) then
+            local _, hash = reaper.MIDI_GetHash(take, true)
+            currentHash = currentHash .. hash
+        end
+    end
+    
+    if eventsHash == currentHash and #sections > 0 then
+        return true  -- No hay cambios, usar las secciones ya parseadas
+    end
+    
+    eventsHash = currentHash
+    sections = {}  -- Reiniciar secciones
+    
+    for i = 0, numItems-1 do
+        local item = reaper.GetTrackMediaItem(eventsTrack, i)
+        local take = reaper.GetActiveTake(item)
+        
+        if reaper.TakeIsMIDI(take) then
+            local _, _, _, textSysexCount = reaper.MIDI_CountEvts(take)
+            
+            for j = 0, textSysexCount-1 do
+                local retval, selected, muted, ppqpos, type, msg = reaper.MIDI_GetTextSysexEvt(take, j)
+                
+                if retval and msg and msg ~= "" then
+                    -- Intentar detectar primero el formato [section Nombre]
+                    local sectionName = msg:match("%[section%s+(.-)%]")
+                    
+                    -- Si no encuentra el formato [section Nombre], usar el texto completo
+                    if not sectionName then
+                        -- Limpiar el texto si contiene corchetes o está en otro formato
+                        sectionName = msg:gsub("%[.*%]", ""):gsub("^%s*(.-)%s*$", "%1")
+                        
+                        -- Si después de limpiar, sigue habiendo contenido, usarlo como nombre de sección
+                        if sectionName == "" then
+                            sectionName = msg  -- Usar el mensaje completo si la limpieza resultó en un string vacío
+                        end
+                    end
+                    
+                    -- Solo añadir si hay un nombre de sección
+                    if sectionName and sectionName ~= "" then
+                        local time = reaper.MIDI_GetProjQNFromPPQPos(take, ppqpos)
+                        table.insert(sections, {time = time, name = sectionName})
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Ordenar las secciones por tiempo
+    table.sort(sections, function(a, b) return a.time < b.time end)
+    
+    return #sections > 0
+end
+
+-- Función para actualizar la sección actual basada en el tiempo
+function updateCurrentSection(currentTime)
+    currentSection = 1
+    
+    for i = 1, #sections do
+        if currentTime >= sections[i].time then
+            currentSection = i
+        else
+            break
+        end
+    end
+end
+
+-- Función para dibujar la sección actual
+function drawCurrentSection()
+    if #sections == 0 or currentSection > #sections then
+        return
+    end
+    
+    local config = sectionDisplayConfig
+    local currentTime = curBeat
+    local section = sections[currentSection]
+    local nextSection = currentSection < #sections and sections[currentSection + 1] or nil
+    
+    -- Calcular opacidad (fade out cercano a la siguiente sección)
+    local opacity = 1.0
+    if nextSection then
+        local timeToNext = nextSection.time - currentTime
+        if timeToNext < config.fadeTime then
+            opacity = timeToNext / config.fadeTime
+            opacity = math.max(0.1, opacity)  -- No desaparece completamente
+        end
+    end
+    
+    -- Guardar los valores originales de color y alfa
+    local orig_r, orig_g, orig_b, orig_a = gfx.r, gfx.g, gfx.b, gfx.a
+    
+    -- Dibujar fondo
+    gfx.r, gfx.g, gfx.b, gfx.a = config.bgColor.r, config.bgColor.g, config.bgColor.b, config.bgColor.a * opacity
+    gfx.rect(config.xOffset, config.yOffset, config.width, config.height, 1)
+    
+    -- Dibujar borde
+    gfx.r, gfx.g, gfx.b, gfx.a = 0.8, 0.8, 0.9, opacity
+    gfx.rect(config.xOffset, config.yOffset, config.width, config.height, 0)
+    
+    -- Dibujar texto
+    gfx.r, gfx.g, gfx.b, gfx.a = config.textColor.r, config.textColor.g, config.textColor.b, config.textColor.a * opacity
+    gfx.setfont(1, "SDK_JP_Web 85W", config.fontSize)
+    
+    local sectionText = section.name
+    local textW, textH = gfx.measurestr(sectionText)
+    local textX = config.xOffset + (config.width - textW) / 2
+    local textY = config.yOffset + (config.height - textH) / 2
+    
+    gfx.x, gfx.y = textX, textY
+    gfx.drawstr(sectionText)
+    
+    -- Restaurar los valores originales de color y alfa
+    gfx.r, gfx.g, gfx.b, gfx.a = orig_r, orig_g, orig_b, orig_a
 end
 
 function mapLane(lane)
@@ -2112,6 +2332,13 @@ local function Main()
         pcall(function() updateVocals() end)
     end
 	
+	pcall(function() parseSections() end)
+
+	if #sections > 0 then
+		updateCurrentSection(curBeat)
+		drawCurrentSection()
+	end
+
 	updateBeatLines()
 	drawBeats()
 	drawNotes()

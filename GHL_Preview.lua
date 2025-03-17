@@ -2380,9 +2380,6 @@ local function Main()
     -- Dibujar botón de activar/desactivar letras
     drawLyricsToggleButton()
     
-    -- Dibujar botón de activar/desactivar letras
-    drawLyricsToggleButton()
-    
     -- Dibujar botón de activar/desactivar HUD de notas
     drawNotesHUDToggleButton()
 	

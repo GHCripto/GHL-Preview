@@ -35,23 +35,23 @@ local showLyrics = true       -- Controla si se muestra el visualizador de letra
 local showNotesHUD = true	  -- Controla si se muestra el visualizador de líneas de notas
 
 -- Colores para las letras
-local textColorInactive = {r = 0.0, g = 0.9, b = 0.0, a = 1.0}  -- Verde
-local textColorActive = {r = 0.0, g = 0.4, b = 1.0, a = 1.0}    -- Azul
-local textColorSung = {r = 0.3, g = 0.6, b = 1.0, a = 1.0}  -- Azul claro para letras ya cantadas
+local textColorInactive = {r = 0.15, g = 0.9, b = 0.0, a = 1.0}  -- Verde
+local textColorActive = {r = 0.0, g = 1.0, b = 1.0, a = 1.0}    -- Azul
+local textColorSung = {r = 0.1176471, g = 0.5647059, b = 1.0, a = 1.0}  -- Azul claro para letras ya cantadas
 local bgColorLyrics = {r = 0.15, g = 0.15, b = 0.25, a = 0.8}   -- Fondo para letras
 
 -- Color para la próxima frase (notas con tono)
-local textColorNextPhrase = {r = 0.45, g = 1.0, b = 0.45, a = 1.0}  -- Verde más claro para próxima frase
+local textColorNextPhrase = {r = 0.0, g = 1.0, b = 0.5, a = 1.0}  -- Verde más claro para próxima frase
 
 -- Color para letras sin tono (marcadas con #)
 local textColorToneless = {r = 0.55, g = 0.55, b = 0.55, a = 1.0}  -- Gris para letras sin tono
 local textColorTonelessActive = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}  -- Blanco puro para letras sin tono activas
-local textColorTonelessSung = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}  -- Blanco puro para letras sin tono ya cantadas
+local textColorTonelessSung = {r = 0.75, g = 0.75, b = 0.75, a = 1.0}  -- Blanco puro para letras sin tono ya cantadas
 
 -- Colores en la sección de colores al inicio del script
-local textColorHeroPower = {r = 1.0, g = 1.0, b = 0.5, a = 1.0}        -- Amarillo para letras con Hero Power
-local textColorHeroPowerActive = {r = 1.0, g = 1.0, b = 0.0, a = 1.0}  -- Amarillo brillante para letras Hero Power activas
-local textColorHeroPowerSung = {r = 1.0, g = 1.0, b = 0.0, a = 1.0}    -- Amarillo más oscuro para letras Hero Power ya cantadas
+local textColorHeroPower = {r = 1.0, g = 1.0, b = 0.15, a = 1.0}        -- Amarillo para letras con Hero Power
+local textColorHeroPowerActive = {r = 1.0, g = 0.5, b = 0.3, a = 1.0}  -- Amarillo brillante para letras Hero Power activas
+local textColorHeroPowerSung = {r = 0.9764706, g = 0.8999952, b = 0.5372549, a = 1.0}    -- Amarillo más oscuro para letras Hero Power ya cantadas
 
 -- Variables configurables para ajustar la posición y tamaño del visualizador de letras
 local lyricsConfig = {

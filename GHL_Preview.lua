@@ -467,7 +467,7 @@ hero_icon = gfx.loadimg(14, script_folder.."assets/hero_icon.png")
 open_note_herocollect = gfx.loadimg(15, script_folder.."assets/open_note_herocollect.png")
 
 instrumentTracks={
-	{"Guitar GHL",findTrack("PART GUITAR GHL")}
+	{"Guitar 3x2",findTrack("PART GUITAR GHL")}
 }
 
 function parseNotes(take)
@@ -630,7 +630,7 @@ end
 
 function updateMidi()
     instrumentTracks={
-        {"Guitar GHL", findTrack("PART GUITAR GHL")}
+        {"Guitar 3x2", findTrack("PART GUITAR GHL")}
     }
     if instrumentTracks[inst][2] then
         local numItems = reaper.CountTrackMediaItems(instrumentTracks[inst][2])
@@ -661,7 +661,7 @@ function resetState()
     -- Reiniciar variables de tracks
     vocalsTrack = nil
     instrumentTracks = {
-        {"Guitar GHL", nil}
+        {"Guitar 3x2", nil}
     }
     
     -- Reiniciar variables de datos
@@ -1178,15 +1178,14 @@ function drawLyricsVisualizer()
     
     -- Configuración para las líneas de notas
     local noteLineConfig = {
-        activeColor = {r = 0.0, g = 0.8, b = 1.0, a = 1.0},  -- Color cian para notas activas
-        inactiveColor = {r = 0.0, g = 0.7, b = 0.9, a = 1.0},  -- Color cian más oscuro para notas inactivas
-        sungColor = {r = 0.3, g = 0.5, b = 1.0, a = 1.0},  -- Color azul para notas ya cantadas
-        hitColor = {r = 1.0, g = 0.8, b = 0.2, a = 1.0},    -- Color amarillo brillante para golpes
-        lineHeight = 5,  -- Altura de la línea de la nota
-        linesSpacing = 8,  -- Separación entre las líneas superior e inferior
+        activeColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color cian para notas activas
+        inactiveColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color cian para notas inactivas
+        sungColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color azul para notas ya cantadas
+        hitColor = {r = 1.0, g = 1.0, b = 0.3, a = 1.0},    -- Color amarillo brillante para golpes
+        linesSpacing = 9,  -- Separación entre las líneas superior e inferior
         specialNoteRadius = 7,  -- Radio para las notas especiales (26 y 29)
-        minPitch = 26,  -- Nota MIDI más baja a mostrar (D1)
-        maxPitch = 86,  -- Nota MIDI más alta a mostrar (D6, según mis pruebas en GHL)
+        minPitch = 26,  -- Nota MIDI más baja a mostrar (D1, rango mínimo según mis pruebas en GHL)
+        maxPitch = 86,  -- Nota MIDI más alta a mostrar (D6, rango máximo según mis pruebas en GHL)
         areaHeight = 230,  -- Altura total del área de líneas de notas
         yOffset = visualizerY - 30,  -- Posición Y base para las líneas de notas
         hitLineX = 150,  -- Posición X de la línea de golpeo (recogedor)
@@ -1197,23 +1196,23 @@ function drawLyricsVisualizer()
     -- Solo dibujar el HUD de notas si está activado
     if showNotesHUD then
         -- Dibujar fondo para las líneas de notas
-		gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
-		gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
+        gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
+        gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
         
         -- Dibujar líneas guía horizontales (las líneas grises que dividen la zona de notas)
-        gfx.r, gfx.g, gfx.b, gfx.a = 0.3, 0.3, 0.3, 0.6  -- Color gris semi-transparente
+        gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, 0.065  -- Color gris semi-transparente
         
         -- Calculamos el espaciado vertical entre líneas guía
         local guideLineSpacing = noteLineConfig.areaHeight / (noteLineConfig.guideLineCount - 1)
         
         -- Dibujamos las líneas guía horizontales
-		for i = 0, noteLineConfig.guideLineCount - 1 do
-			local lineY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (i * guideLineSpacing)
-			gfx.line(0, lineY, gfx.w, lineY, 1)  -- Línea delgada
-		end
+        for i = 0, noteLineConfig.guideLineCount - 1 do
+            local lineY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (i * guideLineSpacing)
+            gfx.line(0, lineY, gfx.w, lineY, 1)  -- Línea delgada
+        end
         
         -- Dibujar varias líneas para crear una línea más gruesa (línea de golpeo vertical)
-        gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 0.3, 0.3, 0.9  -- Color rojo para la línea de golpeo
+        gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 0.3, 0.3, 1.0  -- Color rojo para la línea de golpeo
         for i = -1, 1 do
             gfx.line(
                 noteLineConfig.hitLineX + i, 
@@ -1228,358 +1227,500 @@ function drawLyricsVisualizer()
         local hitDetected = false
         local hitY = 0
         
-		-- Función para dibujar líneas de notas para una frase
-		local function drawNoteLines(phrase, opacity)
-			if not phrase then return end
-			
-			-- Variables para rastrear la letra anterior
-			local prevLyric = nil
-			local prevEndX = nil
-			local prevLineY = nil
-			local prevUpperLineY = nil
-			local prevLowerLineY = nil
-			
-			-- Variables para detectar primera y última nota de la frase
-			local firstNoteIndex = nil
-			local lastNoteIndex = nil
-			
-			-- Encontrar la primera y última nota con pitch en la frase
-			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-					if not firstNoteIndex then
-						firstNoteIndex = i
-					end
-					lastNoteIndex = i
-				end
-			end
-			
-			-- Primera pasada: identificar las cadenas de notas conectadas
-			local connectChains = {} -- Para rastrear las cadenas completas de notas conectadas
-			local chainIds = {} -- Para asignar un ID único a cada cadena
-			local nextChainId = 1
-			
-			-- Construir las cadenas de notas conectadas
-			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-					if lyric.originalText:match("^%+") then
-						-- Esta es una nota conectora, buscar su nota anterior
-						local foundPrev = false
-						for j = i-1, 1, -1 do
-							if phrase.lyrics[j].pitch and phrase.lyrics[j].pitch > 0 then
-								-- Encontramos la nota anterior que está conectada a esta
-								foundPrev = true
-								
-								-- Verificar si la nota anterior ya pertenece a una cadena
-								if chainIds[j] then
-									-- Añadir esta nota a la cadena existente
-									chainIds[i] = chainIds[j]
-									table.insert(connectChains[chainIds[j]], i)
-								else
-									-- Crear una nueva cadena con ambas notas
-									chainIds[j] = nextChainId
-									chainIds[i] = nextChainId
-									connectChains[nextChainId] = {j, i}
-									nextChainId = nextChainId + 1
-								end
-								break
-							end
-						end
-					end
-				end
-			end
-			
-			-- Determinar qué cadenas deben iluminarse
-			local shouldHighlight = {}
-			local chainsToHighlight = {}
-			
-			-- Primero, verificar qué cadenas tienen al menos un elemento tocando el recogedor
-			for i, lyric in ipairs(phrase.lyrics) do
-				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-					local startTime = lyric.startTime
-					local endTime = lyric.endTime
-					local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((startTime - curBeat) / 4.0)
-					local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((endTime - curBeat) / 4.0)
-					
-					-- Si esta nota está tocando el recogedor y es activa
-					if startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX and lyric.isActive then
-						if chainIds[i] then
-							-- Marcar toda esta cadena para iluminar
-							chainsToHighlight[chainIds[i]] = true
-						else
-							-- Es una nota individual, iluminarla
-							shouldHighlight[i] = true
-						end
-					end
-				end
-			end
-			
-			-- Marcar todas las notas de las cadenas que deben iluminarse
-			for chainId, highlight in pairs(chainsToHighlight) do
-				if highlight then
-					for _, noteIndex in ipairs(connectChains[chainId]) do
-						shouldHighlight[noteIndex] = true
-					end
-				end
-			end
-			
-			-- Para notas que ya pasaron el recogedor pero están en una cadena activa
-			for chainId, chain in pairs(connectChains) do
-				-- Verificar si al menos una nota de la cadena está activa pero otra ya pasó
-				local chainActive = false
-				local someNotesPassed = false
-				
-				for _, noteIndex in ipairs(chain) do
-					local lyric = phrase.lyrics[noteIndex]
-					local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - curBeat) / 4.0)
-					
-					if endX >= noteLineConfig.hitLineX and lyric.isActive then
-						chainActive = true
-					end
-					
-					if endX < noteLineConfig.hitLineX then
-						someNotesPassed = true
-					end
-				end
-				
-				-- Si la cadena está activa, iluminar todas las notas incluso las que ya pasaron
-				if chainActive then
-					for _, noteIndex in ipairs(chain) do
-						shouldHighlight[noteIndex] = true
-					end
-				end
-			end
-			
-			for _, lyric in ipairs(phrase.lyrics) do
-				-- Solo dibujar si tiene pitch (tono) y no es toneless (sin tono)
-				if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-					-- Calcular posición Y basada en el pitch
-					local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
-					local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
-					pitchNormalized = math.max(0, math.min(1, pitchNormalized))  -- Asegurar que esté entre 0 y 1
-					
-					-- Centrar verticalmente las notas 26 y 29 en el HUD (estilo GHL)
-					local lineY
-					if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then -- también incluye las notas con tono marcadas con "#"
-						-- Centrar estas notas en el HUD verticalmente
-						lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
-					else
-						-- Para las demás notas, usar la posición basada en el pitch
-						lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * pitchNormalized
-					end
-					
-					-- Calcular posición X y ancho basados en el tiempo
-					local timeRange = 5.5  -- Mostrar 4 beats en la pantalla
-					local timeOffset = curBeat  -- Tiempo actual
-					
-					-- Ajustar los tiempos para que la nota golpee la línea cuando sea activa
-					local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.startTime - timeOffset) / timeRange)
-					local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - timeOffset) / timeRange)
-					
-					-- Limitar a la ventana visible
-					local originalStartX = startX  -- Guarda el valor original antes de limitarlo
-					local originalEndX = endX
-					startX = math.max(150, math.min(gfx.w - 20, startX))
-					endX = math.max(20, math.min(gfx.w - 20, endX))
-					
-					-- Determinar si esta nota está visible
-					local isVisible = (endX > 20 and startX < gfx.w - 20)
-					
-					-- Verificar si la nota está tocando la línea de golpeo
-					local isHitting = (startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX and lyric.isActive)
-					
-					-- Verificar si esta nota debe iluminarse debido a una nota conectora posterior
-					local shouldIlluminate = isHitting or shouldHighlight[_] or false
-					
-					-- Solo dibujar si la línea es visible
-					if isVisible then
-						-- Definir el color según el estado de la lírica
-						if shouldIlluminate then
-							-- Nota golpeando la línea - usar color de efecto de golpeo
-							gfx.r = noteLineConfig.hitColor.r
-							gfx.g = noteLineConfig.hitColor.g
-							gfx.b = noteLineConfig.hitColor.b
-							gfx.a = noteLineConfig.hitColor.a
-							
-							-- Solo registrar el golpe y su posición Y si realmente está tocando el recogedor
-							if isHitting then
-								hitDetected = true
-								hitY = lineY
-							end
-						elseif lyric.isActive then
-							gfx.r = noteLineConfig.activeColor.r
-							gfx.g = noteLineConfig.activeColor.g
-							gfx.b = noteLineConfig.activeColor.b
-							gfx.a = noteLineConfig.activeColor.a
-						elseif lyric.hasBeenSung then
-							gfx.r = noteLineConfig.sungColor.r
-							gfx.g = noteLineConfig.sungColor.g
-							gfx.b = noteLineConfig.sungColor.b
-							gfx.a = noteLineConfig.sungColor.a
-						else
-							gfx.r = noteLineConfig.inactiveColor.r
-							gfx.g = noteLineConfig.inactiveColor.g
-							gfx.b = noteLineConfig.inactiveColor.b
-							gfx.a = noteLineConfig.inactiveColor.a
-						end
-						
-						-- Calcular las posiciones Y para las líneas superior e inferior
-						-- Usar linesSpacing para aumentar la separación entre las líneas
-						local upperLineY = lineY - noteLineConfig.linesSpacing/2
-						local lowerLineY = lineY + noteLineConfig.linesSpacing/2
-						
-						-- Solo dibujar la parte de las líneas que están a la derecha del recogedor
-						-- Ajustar el punto de inicio para que nunca dibuje a la izquierda del recogedor
-						local visibleStartX = math.max(startX, noteLineConfig.hitLineX)
-						
-						-- Solo dibujar si al menos parte de la nota está a la derecha del recogedor
-						if endX > noteLineConfig.hitLineX then
-							-- Comprobar si es una nota especial (pitch 26 o 29)
-							if lyric.pitch == 29 then
-								-- Nota 29: Dibujar solo un círculo (con la misma lógica que la nota 26)
-								local circleRadius = noteLineConfig.specialNoteRadius
-								
-								-- Dibujar el círculo siguiendo la misma lógica que la nota 26
-								if startX >= noteLineConfig.hitLineX then
-									-- Si el inicio de la nota es visible, dibujar el círculo ahí
-									gfx.circle(startX, lineY, circleRadius, 1, 1)
-								elseif endX > noteLineConfig.hitLineX then
-									-- Si la nota cruza el recogedor, dibujar el círculo en el recogedor
-									gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
-								end
-								
-							elseif lyric.pitch == 26 or lyric.isToneless then
-								-- Nota 26: Dibujar círculo al inicio y líneas normales
-								local circleRadius = noteLineConfig.specialNoteRadius
-								
-								-- Dibujar las líneas horizontales con la misma lógica que las notas normales
-								gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
-								gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
-								
-								-- Dibujar el círculo al inicio
-								if startX >= noteLineConfig.hitLineX then
-									-- Si el inicio de la nota es visible, dibujar el círculo ahí
-									gfx.circle(startX, lineY, circleRadius, 1, 1)
-								elseif endX > noteLineConfig.hitLineX then
-									-- Si la nota cruza el recogedor, dibujar el círculo en el recogedor
-									gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
-								end
-								
-								-- Dibujar línea vertical de cierre si es la última nota
-								if _ == lastNoteIndex and endX < gfx.w - 20 then
-									gfx.line(endX, upperLineY, endX, lowerLineY, 1)
-								end
-							else
-								-- Notas normales: Dibujar las dos líneas horizontales
-								gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
-								gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
-								
-								-- Dibujar líneas verticales de apertura y cierre para primera y última nota
-								if _ == firstNoteIndex and visibleStartX == startX then
-									-- Es la primera nota y es visible, dibujar línea vertical de apertura
-									gfx.line(startX, upperLineY, startX, lowerLineY, 1)
-								end
-								
-								if _ == lastNoteIndex and endX < gfx.w - 20 then
-									-- Es la última nota y el final es visible, dibujar línea vertical de cierre
-									gfx.line(endX, upperLineY, endX, lowerLineY, 1)
-								end
-							end
-						end
-						
-						-- Dibujar línea conectora si esta es una sílaba "+"
-						if lyric.originalText:match("^%+") and prevLyric then
-							-- Calcular los puntos originales de la línea conectora completa
-							local originalStartX = prevEndX
-							local originalStartY = prevLineY
-							local originalEndX = startX
-							local originalEndY = lineY
-							
-							-- Ajuste para que la línea comience desde el extremo de la línea anterior
-							-- en lugar del centro
-							local startYAdjustment = 0  -- Ajustar este valor según sea necesario
-							
-							-- Determinar visibilidad y puntos de inicio visibles
-							local visibleStartX = originalStartX
-							local visibleStartY = originalStartY + startYAdjustment
-                            
-                            -- Detectar si la línea conectora está intersectando con el recogedor
-                            -- Si el inicio está a la izquierda y el final a la derecha del recogedor
-                            if originalStartX < noteLineConfig.hitLineX and originalEndX > noteLineConfig.hitLineX and lyric.isActive then
-                                -- Calcular la posición Y donde la línea conectora intersecta el recogedor
-                                -- usando la ecuación de la recta: y = m*(x - x1) + y1
-                                -- donde m = (y2 - y1) / (x2 - x1)
-                                local m = (originalEndY - visibleStartY) / (originalEndX - originalStartX)
-                                local hitConnectorY = visibleStartY + m * (noteLineConfig.hitLineX - originalStartX)
+        -- Función para dibujar líneas de notas para una frase
+        local function drawNoteLines(phrase, opacity)
+            if not phrase then return end
+            
+            -- Variables para rastrear la letra anterior
+            local prevLyric = nil
+            local prevEndX = nil
+            local prevLineY = nil
+            local prevUpperLineY = nil
+            local prevLowerLineY = nil
+            
+            -- Variables para detectar primera y última nota de la frase
+            local firstNoteIndex = nil
+            local lastNoteIndex = nil
+            
+            -- Encontrar la primera y última nota con pitch en la frase
+            for i, lyric in ipairs(phrase.lyrics) do
+                if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                    if not firstNoteIndex then
+                        firstNoteIndex = i
+                    end
+                    lastNoteIndex = i
+                end
+            end
+            
+            -- Primera pasada: identificar las cadenas de notas conectadas
+            local connectChains = {} -- Para rastrear las cadenas completas de notas conectadas
+            local chainIds = {} -- Para asignar un ID único a cada cadena
+            local nextChainId = 1
+            
+            -- Construir las cadenas de notas conectadas
+            for i, lyric in ipairs(phrase.lyrics) do
+                if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                    if lyric.originalText:match("^%+") then
+                        -- Esta es una nota conectora, buscar su nota anterior
+                        local foundPrev = false
+                        for j = i-1, 1, -1 do
+                            if phrase.lyrics[j].pitch and phrase.lyrics[j].pitch > 0 then
+                                -- Encontramos la nota anterior que está conectada a esta
+                                foundPrev = true
                                 
-                                -- Activar el efecto hit
-                                hitDetected = true
-                                hitY = hitConnectorY  -- Usar la posición Y calculada para la intersección
+                                -- Verificar si la nota anterior ya pertenece a una cadena
+                                if chainIds[j] then
+                                    -- Añadir esta nota a la cadena existente
+                                    chainIds[i] = chainIds[j]
+                                    table.insert(connectChains[chainIds[j]], i)
+                                else
+                                    -- Crear una nueva cadena con ambas notas
+                                    chainIds[j] = nextChainId
+                                    chainIds[i] = nextChainId
+                                    connectChains[nextChainId] = {j, i}
+                                    nextChainId = nextChainId + 1
+                                end
+                                break
                             end
-							
-							-- Si la línea cruza el recogedor, calculamos la intersección
-							if originalStartX < noteLineConfig.hitLineX then
-								-- Calcular la nueva Y correspondiente al punto de intersección con el recogedor
-								-- usando la ecuación de la recta: y = m*(x - x1) + y1
-								-- donde m = (y2 - y1) / (x2 - x1)
-								local m = (originalEndY - visibleStartY) / (originalEndX - originalStartX)
-								visibleStartX = noteLineConfig.hitLineX
-								visibleStartY = m * (noteLineConfig.hitLineX - originalStartX) + visibleStartY
-							end
-							
-							-- Asegurarnos de que la nota "+" todavía está (al menos parcialmente) a la derecha del recogedor
-							if startX >= noteLineConfig.hitLineX or endX > noteLineConfig.hitLineX then
-								-- MODIFICACIÓN: Reemplazar la línea conectora única con dos líneas
-								-- En vez de: gfx.line(visibleStartX, visibleStartY, originalEndX, originalEndY, noteLineConfig.lineHeight)
-								
-								-- Calcular las posiciones Y para las líneas superior e inferior en ambos extremos
-								-- Usar linesSpacing para mantener la misma separación en los conectores
-								local visibleStartUpperY = visibleStartY - noteLineConfig.linesSpacing/2
-								local visibleStartLowerY = visibleStartY + noteLineConfig.linesSpacing/2
-								local originalEndUpperY = originalEndY - noteLineConfig.linesSpacing/2
-								local originalEndLowerY = originalEndY + noteLineConfig.linesSpacing/2
-								
-								-- Dibujar las dos líneas diagonales
-								gfx.line(visibleStartX, visibleStartUpperY, originalEndX, originalEndUpperY, 1) -- Línea superior
-								gfx.line(visibleStartX, visibleStartLowerY, originalEndX, originalEndLowerY, 1) -- Línea inferior
-							end
-						end
-					end
-					
-					-- Guardar información de esta nota para la próxima iteración
-					prevLyric = lyric
-					prevEndX = endX
-					prevLineY = lineY
-					prevUpperLineY = upperLineY
-					prevLowerLineY = lowerLineY
-				end
-			end
-			
-			-- Reiniciar el prevLyric para la siguiente frase
-			prevLyric = nil
-			prevEndX = nil
-			prevLineY = nil
-		end
+                        end
+                    end
+                end
+            end
+            
+            -- Determinar qué cadenas deben iluminarse
+            local shouldHighlight = {}
+            local chainsToHighlight = {}
+            
+            -- Primero, verificar qué cadenas tienen al menos un elemento activo
+            for i, lyric in ipairs(phrase.lyrics) do
+                if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                    local startTime = lyric.startTime
+                    local endTime = lyric.endTime
+                    local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((startTime - curBeat) / 4.0)
+                    local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((endTime - curBeat) / 4.0)
+                    
+                    -- Si esta nota está activa (sin importar si cruza el recogedor)
+                    if lyric.isActive then
+                        if chainIds[i] then
+                            -- Marcar toda esta cadena para iluminar
+                            chainsToHighlight[chainIds[i]] = true
+                        else
+                            -- Es una nota individual, iluminarla si cruza el recogedor
+                            if startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX then
+                                shouldHighlight[i] = true
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Marcar todas las notas de las cadenas que deben iluminarse
+            for chainId, highlight in pairs(chainsToHighlight) do
+                if highlight then
+                    for _, noteIndex in ipairs(connectChains[chainId]) do
+                        shouldHighlight[noteIndex] = true
+                    end
+                end
+            end
+            
+            -- Para notas que ya pasaron el recogedor pero están en una cadena activa
+            for chainId, chain in pairs(connectChains) do
+                -- Verificar si al menos una nota de la cadena está activa
+                local chainActive = false
+                for _, noteIndex in ipairs(chain) do
+                    local lyric = phrase.lyrics[noteIndex]
+                    if lyric.isActive then
+                        chainActive = true
+                        break
+                    end
+                end
+                
+                -- Si la cadena está activa, iluminar todas las notas incluso las que ya pasaron
+                if chainActive then
+                    for _, noteIndex in ipairs(connectChains[chainId]) do
+                        shouldHighlight[noteIndex] = true
+                    end
+                end
+            end
+            
+            for i, lyric in ipairs(phrase.lyrics) do
+                -- Solo dibujar si tiene pitch (tono) y no es toneless (sin tono)
+                if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                    -- Calcular posición Y basada en el pitch
+                    local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
+                    local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
+                    pitchNormalized = math.max(0, math.min(1, pitchNormalized))  -- Asegurar que esté entre 0 y 1
+                    
+                    -- Centrar verticalmente las notas 26 y 29 en el HUD (estilo GHL)
+                    local lineY
+                    if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
+                        lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
+                    else
+                        lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * pitchNormalized
+                    end
+                    
+                    -- Calcular posición X y ancho basados en el tiempo
+                    local timeRange = 4.5  -- Mostrar 4 beats en la pantalla
+                    local timeOffset = curBeat  -- Tiempo actual
+                    
+                    -- Ajustar los tiempos para que la nota golpee la línea cuando sea activa
+                    local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.startTime - timeOffset) / timeRange)
+                    local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - timeOffset) / timeRange)
+                    
+                    -- Limitar a la ventana visible
+                    local originalStartX = startX  -- Guarda el valor original antes de limitarlo
+                    local originalEndX = endX
+                    startX = math.max(150, math.min(gfx.w - 20, startX))
+                    endX = math.max(20, math.min(gfx.w - 20, endX))
+                    
+                    -- Determinar si esta nota está visible
+                    local isVisible = (endX > 20 and startX < gfx.w - 20)
+                    
+                    -- Verificar si la nota está tocando la línea de golpeo
+                    local isHitting = (startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX and lyric.isActive)
+                    
+                    -- Verificar si esta nota debe iluminarse debido a una nota conectora
+                    local shouldIlluminate = isHitting or shouldHighlight[i] or false
+                    
+                    -- Solo dibujar si la línea es visible
+                    if isVisible then
+                        -- Definir el color según el estado de la lírica
+                        if shouldIlluminate then
+                            -- Nota en una cadena activa o golpeando la línea - usar color de efecto de golpeo
+                            gfx.r = noteLineConfig.hitColor.r
+                            gfx.g = noteLineConfig.hitColor.g
+                            gfx.b = noteLineConfig.hitColor.b
+                            gfx.a = noteLineConfig.hitColor.a * opacity
+                            
+                            -- Solo registrar el golpe y su posición Y si realmente está tocando el recogedor
+                            if isHitting then
+                                hitDetected = true
+                                hitY = lineY
+                            end
+                        elseif lyric.isActive then
+                            gfx.r = noteLineConfig.activeColor.r
+                            gfx.g = noteLineConfig.activeColor.g
+                            gfx.b = noteLineConfig.activeColor.b
+                            gfx.a = noteLineConfig.activeColor.a * opacity
+                        elseif lyric.hasBeenSung then
+                            gfx.r = noteLineConfig.sungColor.r
+                            gfx.g = noteLineConfig.sungColor.g
+                            gfx.b = noteLineConfig.sungColor.b
+                            gfx.a = noteLineConfig.sungColor.a * opacity
+                        else
+                            gfx.r = noteLineConfig.inactiveColor.r
+                            gfx.g = noteLineConfig.inactiveColor.g
+                            gfx.b = noteLineConfig.inactiveColor.b
+                            gfx.a = noteLineConfig.inactiveColor.a * opacity
+                        end
+                        
+                        -- Calcular las posiciones Y para las líneas superior e inferior
+                        local upperLineY = lineY - noteLineConfig.linesSpacing/2
+                        local lowerLineY = lineY + noteLineConfig.linesSpacing/2
+                        
+                        -- Solo dibujar la parte de las líneas que están a la derecha del recogedor
+                        local visibleStartX = math.max(startX, noteLineConfig.hitLineX)
+                        
+                        -- Solo dibujar si al menos parte de la nota está a la derecha del recogedor
+                        if endX > noteLineConfig.hitLineX then
+                            -- Comprobar si es una nota especial (pitch 26 o 29)
+                            if lyric.pitch == 29 then
+                                -- Nota 29: Dibujar solo un círculo
+                                local circleRadius = noteLineConfig.specialNoteRadius
+                                if startX >= noteLineConfig.hitLineX then
+                                    gfx.circle(startX, lineY, circleRadius, 1, 1)
+                                elseif endX > noteLineConfig.hitLineX then
+                                    gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
+                                end
+                            elseif lyric.pitch == 26 or lyric.isToneless then
+                                -- Nota 26: Dibujar círculo al inicio y líneas normales
+                                local circleRadius = noteLineConfig.specialNoteRadius
+                                gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
+                                gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
+                                if startX >= noteLineConfig.hitLineX then
+                                    gfx.circle(startX, lineY, circleRadius, 1, 1)
+                                elseif endX > noteLineConfig.hitLineX then
+                                    gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
+                                end
+                                if i == lastNoteIndex and endX < gfx.w - 20 then
+                                    gfx.line(endX, upperLineY, endX, lowerLineY, 1)
+                                end
+                            else
+                                -- Notas normales: Dibujar las dos líneas horizontales
+                                gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
+                                gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
+                                if i == firstNoteIndex and visibleStartX == startX then
+                                    gfx.line(startX, upperLineY, startX, lowerLineY, 1)
+                                end
+                                if i == lastNoteIndex and endX < gfx.w - 20 then
+                                    gfx.line(endX, upperLineY, endX, lowerLineY, 1)
+                                end
+                            end
+                        end
+                    end
+                    
+                    -- Guardar información de esta nota para la próxima iteración
+                    prevLyric = lyric
+                    prevEndX = endX
+                    prevLineY = lineY
+                    prevUpperLineY = upperLineY
+                    prevLowerLineY = lowerLineY
+                end
+            end
+            
+            -- Reiniciar el prevLyric para la siguiente frase
+            prevLyric = nil
+            prevEndX = nil
+            prevLineY = nil
+        end
+        
+        -- Nueva función para dibujar las líneas conectoras grises para todas las frases visibles
+        local function drawAllGreyConnectorLines()
+            local timeRange = 4.5
+            local timeOffset = curBeat
+            local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
+            
+            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
+            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+                local phrase = phrases[phraseIndex]
+                if not phrase then break end
+                
+                -- Usar opacidad fija para todas las frases
+                local opacity = 0.2
+                
+                -- Dibujar conexiones dentro de la frase actual
+                for i = 1, #phrase.lyrics - 1 do
+                    local currentLyric = phrase.lyrics[i]
+                    local nextLyric = phrase.lyrics[i + 1]
+                    
+                    -- Solo conectar si ambas notas tienen pitch y no son notas de Hero Power (HP)
+                    if currentLyric.pitch and nextLyric.pitch and 
+                       currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
+                       currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
+                        
+                        -- Calcular posiciones Y basadas en los pitches o si es toneless
+                        local currentLineY
+                        if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
+                            currentLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
+                        else
+                            local currentPitchNormalized = (currentLyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
+                            currentPitchNormalized = math.max(0, math.min(1, currentPitchNormalized))
+                            currentLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * currentPitchNormalized
+                        end
+                        
+                        local nextLineY
+                        if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
+                            nextLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
+                        else
+                            local nextPitchNormalized = (nextLyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
+                            nextPitchNormalized = math.max(0, math.min(1, nextPitchNormalized))
+                            nextLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * nextPitchNormalized
+                        end
+                        
+                        -- Calcular posiciones X basadas en tiempos
+                        local currentEndX = noteLineConfig.hitLineX + (gfx.w - 40) * ((currentLyric.endTime - timeOffset) / timeRange)
+                        local nextStartX = noteLineConfig.hitLineX + (gfx.w - 40) * ((nextLyric.startTime - timeOffset) / timeRange)
+                        
+                        -- Determinar si la conexión es visible (al menos una parte debe estar en el HUD)
+                        local isVisible = (currentEndX < gfx.w - 20 and nextStartX > 20)
+                        
+                        if isVisible then
+                            -- Calcular posiciones Y para las líneas superior e inferior
+                            local upperCurrentY = currentLineY - noteLineConfig.linesSpacing/2
+                            local lowerCurrentY = currentLineY + noteLineConfig.linesSpacing/2
+                            local upperNextY = nextLineY - noteLineConfig.linesSpacing/2
+                            local lowerNextY = nextLineY + noteLineConfig.linesSpacing/2
+                            
+                            -- Guardar los valores originales de X para los cálculos de interpolación
+                            local originalCurrentEndX = currentEndX
+                            local originalNextStartX = nextStartX
+                            
+                            -- Limitar las posiciones X para que no se dibujen a la izquierda de la línea de golpeo (x = 150)
+                            currentEndX = math.max(noteLineConfig.hitLineX, currentEndX)
+                            nextStartX = math.max(noteLineConfig.hitLineX, nextStartX)
+                            
+                            -- Ajustar también para que no se dibujen fuera del HUD
+                            currentEndX = math.min(gfx.w - 20, currentEndX)
+                            nextStartX = math.min(gfx.w - 20, nextStartX)
+                            
+                            -- Si ajustamos currentEndX, interpolar las posiciones Y correspondientes
+                            if currentEndX ~= originalCurrentEndX then
+                                local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                upperCurrentY = upperCurrentY + mUpper * (currentEndX - originalCurrentEndX)
+                                lowerCurrentY = lowerCurrentY + mLower * (currentEndX - originalCurrentEndX)
+                            end
+                            
+                            -- Si ajustamos nextStartX, interpolar las posiciones Y correspondientes
+                            if nextStartX ~= originalNextStartX then
+                                local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                upperNextY = upperCurrentY + mUpper * (nextStartX - originalCurrentEndX)
+                                lowerNextY = lowerCurrentY + mLower * (nextStartX - originalCurrentEndX)
+                            end
+                            
+                            -- Solo dibujar si las posiciones X son diferentes (evitar líneas verticales)
+                            if currentEndX ~= nextStartX and nextStartX >= noteLineConfig.hitLineX then
+                                -- Usar opacidad fija para las líneas conectoras grises
+                                gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, opacity
+                                -- Línea superior
+                                gfx.line(currentEndX, upperCurrentY, nextStartX, upperNextY, 1)
+                                -- Línea inferior
+                                gfx.line(currentEndX, lowerCurrentY, nextStartX, lowerNextY, 1)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Función ajustada para dibujar las líneas conectoras "+" con iluminación y movimiento correcto del círculo
+        local function drawAllPlusConnectorLines()
+            local timeRange = 4.5
+            local timeOffset = curBeat
+            local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
+            
+            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
+            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+                local phrase = phrases[phraseIndex]
+                if not phrase then break end
+                
+                -- Usar opacidad fija para todas las frases
+                local opacity = 1.0
+                
+                -- Variables para rastrear la nota anterior
+                local prevLyric = nil
+                local prevEndX = nil
+                local prevLineY = nil
+                
+                -- Iterar sobre las letras de la frase para encontrar notas con "+"
+                for i, lyric in ipairs(phrase.lyrics) do
+                    -- Solo procesar si tiene pitch y no es Hero Power (HP)
+                    if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                        -- Calcular posición Y basada en el pitch
+                        local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
+                        pitchNormalized = math.max(0, math.min(1, pitchNormalized))
+                        
+                        local lineY
+                        if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
+                            lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
+                        else
+                            lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * pitchNormalized
+                        end
+                        
+                        -- Calcular posición X basada en el tiempo
+                        local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.startTime - timeOffset) / timeRange)
+                        local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - timeOffset) / timeRange)
+                        
+                        -- Dibujar línea conectora si esta es una sílaba "+"
+                        if lyric.originalText:match("^%+") and prevLyric then
+                            -- Determinar si la línea es visible (al menos parcialmente)
+                            local isVisible = (prevEndX < gfx.w - 20 and startX > noteLineConfig.hitLineX)
+                            
+                            if isVisible then
+                                -- Ajustar los puntos de inicio y fin para que estén dentro del HUD
+                                local drawStartX = prevEndX
+                                local drawStartY = prevLineY
+                                local drawEndX = startX
+                                local drawEndY = lineY
+                                
+                                -- Guardar los valores originales para cálculos de interpolación y detección de golpeo
+                                local originalStartX = drawStartX
+                                local originalStartY = drawStartY -- Guardar el valor original de Y
+                                local originalEndX = drawEndX
+                                local originalEndY = drawEndY -- Guardar el valor original de Y
+                                local originalStartTime = prevLyric.endTime
+                                local originalEndTime = lyric.startTime
+                                
+                                -- Si el inicio está a la izquierda del recogedor, calcular la intersección
+                                if drawStartX < noteLineConfig.hitLineX then
+                                    local m = (drawEndY - drawStartY) / (drawEndX - drawStartX)
+                                    drawStartX = noteLineConfig.hitLineX
+                                    drawStartY = drawStartY + m * (noteLineConfig.hitLineX - originalStartX)
+                                end
+                                
+                                -- Si el final está más allá del borde derecho, calcular la intersección
+                                if drawEndX > gfx.w - 20 then
+                                    local m = (drawEndY - drawStartY) / (drawEndX - drawStartX)
+                                    drawEndX = gfx.w - 20
+                                    drawEndY = drawStartY + m * (gfx.w - 20 - originalStartX)
+                                end
+                                
+                                -- Calcular las posiciones Y para las líneas superior e inferior
+                                local startUpperY = drawStartY - noteLineConfig.linesSpacing/2
+                                local startLowerY = drawStartY + noteLineConfig.linesSpacing/2
+                                local endUpperY = drawEndY - noteLineConfig.linesSpacing/2
+                                local endLowerY = drawEndY + noteLineConfig.linesSpacing/2
+                                
+                                -- Verificar si la línea conectora está activa (basado en el tiempo de la nota conectora)
+                                local isConnectorActive = lyric.isActive
+                                
+                                -- Aplicar color según el estado de la línea conectora
+                                if isConnectorActive then
+                                    -- Línea conectora activa: usar color de golpeo
+                                    gfx.r = noteLineConfig.hitColor.r
+                                    gfx.g = noteLineConfig.hitColor.g
+                                    gfx.b = noteLineConfig.hitColor.b
+                                    gfx.a = noteLineConfig.hitColor.a * opacity
+                                else
+                                    -- Línea conectora inactiva: usar el mismo color que las líneas de notas inactivas (cian)
+                                    gfx.r = noteLineConfig.inactiveColor.r
+                                    gfx.g = noteLineConfig.inactiveColor.g
+                                    gfx.b = noteLineConfig.inactiveColor.b
+                                    gfx.a = noteLineConfig.inactiveColor.a * opacity
+                                end
+                                
+                                -- Dibujar las dos líneas diagonales
+                                gfx.line(drawStartX, startUpperY, drawEndX, endUpperY, 1) -- Línea superior
+                                gfx.line(drawStartX, startLowerY, drawEndX, endLowerY, 1) -- Línea inferior
+                                
+                                -- Detectar si la línea conectora está activa y cruza el recogedor
+                                if isConnectorActive and originalStartX < noteLineConfig.hitLineX and originalEndX > noteLineConfig.hitLineX then
+                                    -- Calcular la posición Y donde la línea conectora intersecta el recogedor
+                                    -- usando la ecuación de la recta: y = m*(x - x1) + y1
+                                    -- donde m = (y2 - y1) / (x2 - x1)
+                                    -- Usar los valores originales para evitar errores por ajustes previos
+                                    local m = (originalEndY - originalStartY) / (originalEndX - originalStartX)
+                                    local hitConnectorY = originalStartY + m * (noteLineConfig.hitLineX - originalStartX)
+                                    
+                                    -- Activar el círculo en el recogedor
+                                    hitDetected = true
+                                    hitY = hitConnectorY -- Actualizar la posición del círculo amarillo
+                                end
+                            end
+                        end
+                        
+                        -- Guardar información de esta nota para la próxima iteración
+                        prevLyric = lyric
+                        prevEndX = endX
+                        prevLineY = lineY
+                    end
+                end
+            end
+        end
         
         -- Dibujar líneas de notas para varias frases futuras (actual + 4 más)
-        -- Dibujar la frase actual
         drawNoteLines(currentPhraseObj, 1.0)
         
-        -- Dibujar las próximas 4 frases con opacidad reducida progresivamente
+        -- Dibujar las próximas 4 frases con la misma opacidad (1.0)
         for i = 1, 4 do
             local nextPhrase = currentPhrase + i
             if nextPhrase <= #phrases then
                 local nextPhraseObj = phrases[nextPhrase]
-                local opacity = 0.9 - (i * 0.1) -- Reducir la opacidad gradualmente
-                drawNoteLines(nextPhraseObj, math.max(0.4, opacity))
+                drawNoteLines(nextPhraseObj, 1.0)
             end
         end
+        
+        -- Dibujar todas las líneas conectoras grises
+        drawAllGreyConnectorLines()
+        
+        -- Dibujar todas las líneas conectoras "+"
+        drawAllPlusConnectorLines()
         
         -- Dibujar el efecto de golpeo si se detectó
         if hitDetected then
             -- Dibujar círculos de efecto en la línea de golpeo
             gfx.r, gfx.g, gfx.b, gfx.a = noteLineConfig.hitColor.r, noteLineConfig.hitColor.g, noteLineConfig.hitColor.b, 0.7
-            
-            -- Dibujar círculo exterior (efecto de brillo)
             local outerRadius = noteLineConfig.hitCircleRadius * 1.5
             gfx.circle(noteLineConfig.hitLineX, hitY, outerRadius, 0, 1)
             
@@ -1591,7 +1732,7 @@ function drawLyricsVisualizer()
     
     -- Dibujar título del visualizador
     gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, 1
-    gfx.setfont(1, "SDK_JP_Web 85W", 18) -- Genshin Impact font
+    gfx.setfont(1, "SDK_JP_Web 85W", 18)
     local titleText = "Phrase: " .. currentPhrase .. "/" .. #phrases
     local titleW, titleH = gfx.measurestr(titleText)
     
@@ -1599,132 +1740,111 @@ function drawLyricsVisualizer()
     gfx.drawstr(titleText)
     
     -- Función para renderizar una frase con los espacios correctos
-	local function renderPhrase(phrase, font_size, y_pos, alpha_mult)
-		if #phrase.lyrics == 0 then
-			gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, alpha_mult or 1
-			gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
-			local noLyricsText = "[No lyrics found]"
-			local textW, _ = gfx.measurestr(noLyricsText)
-			gfx.x, gfx.y = (gfx.w - textW) / 2, y_pos
-			gfx.drawstr(noLyricsText)
-			return
-		end
-		
-		-- Primero, agrupa las letras basándose en conectores
-		local word_groups = {}
-		local current_group = {}
-		
-		for i, lyric in ipairs(phrase.lyrics) do
-			table.insert(current_group, lyric)
-			
-			-- Si esta letra no termina con guion, o es la última letra de la frase,
-			-- cierra el grupo actual y comienza uno nuevo
-			if not lyric.endsWithHyphen or i == #phrase.lyrics then
-				table.insert(word_groups, current_group)
-				current_group = {}
-			end
-		end
-		
-		-- Ahora calcular el ancho total incluyendo espacios entre palabras
-		gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
-		local spaceWidth = gfx.measurestr(" ")
-		local totalWidth = 0
-		
-		for i, group in ipairs(word_groups) do
-			for _, lyric in ipairs(group) do
-				local textW, _ = gfx.measurestr(lyric.text)
-				totalWidth = totalWidth + textW
-			end
-			
-			-- Añadir espacio después de cada grupo excepto el último
-			if i < #word_groups then
-				totalWidth = totalWidth + spaceWidth
-			end
-		end
-		
-		-- Dibujar los grupos de palabras
-		local startX = (gfx.w - totalWidth) / 2
-		
-		for i, group in ipairs(word_groups) do
-			for j, lyric in ipairs(group) do
-				local textW, _ = gfx.measurestr(lyric.text)
-				
-				-- Establecer color basado en el estado, si es sin tono o si tiene Hero Power
-				if lyric.hasHeroPower then
-					-- Letra con Hero Power
-					if lyric.isActive then
-						-- Activa: amarillo brillante
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerActive.r, textColorHeroPowerActive.g, textColorHeroPowerActive.b, textColorHeroPowerActive.a * (alpha_mult or 1)
-					elseif lyric.hasBeenSung then
-						-- Cantada: amarillo más oscuro
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerSung.r, textColorHeroPowerSung.g, textColorHeroPowerSung.b, textColorHeroPowerSung.a * (alpha_mult or 1)
-					else
-						-- Inactiva: amarillo normal
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPower.r, textColorHeroPower.g, textColorHeroPower.b, textColorHeroPower.a * (alpha_mult or 1)
-					end
-				elseif lyric.isToneless then
-					-- Letra sin tono (marcada con #)
-					if lyric.isActive then
-						-- Activa: gris más claro
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessActive.r, textColorTonelessActive.g, textColorTonelessActive.b, textColorTonelessActive.a * (alpha_mult or 1)
-					elseif lyric.hasBeenSung then
-						-- Cantada: gris azulado
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessSung.r, textColorTonelessSung.g, textColorTonelessSung.b, textColorTonelessSung.a * (alpha_mult or 1)
-					else
-						-- Inactiva: gris
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorToneless.r, textColorToneless.g, textColorToneless.b, textColorToneless.a * (alpha_mult or 1)
-					end
-				else
-					-- Letra normal (con tono)
-					if lyric.isActive then
-						-- Activa: azul intenso
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorActive.r, textColorActive.g, textColorActive.b, textColorActive.a * (alpha_mult or 1)
-					elseif lyric.hasBeenSung then
-						-- Cantada: azul claro
-						gfx.r, gfx.g, gfx.b, gfx.a = textColorSung.r, textColorSung.g, textColorSung.b, textColorSung.a * (alpha_mult or 1)
-					else
-						-- Inactiva: verde normal o verde claro según si es próxima frase
-						if alpha_mult and alpha_mult < 1.0 then
-							-- Es la próxima frase (alpha_mult siempre es 0.9 para la próxima frase)
-							gfx.r, gfx.g, gfx.b, gfx.a = textColorNextPhrase.r, textColorNextPhrase.g, textColorNextPhrase.b, textColorNextPhrase.a * (alpha_mult or 1)
-						else
-							-- Es la frase actual
-							gfx.r, gfx.g, gfx.b, gfx.a = textColorInactive.r, textColorInactive.g, textColorInactive.b, textColorInactive.a * (alpha_mult or 1)
-						end
-					end
-				end
-				
-				gfx.x, gfx.y = startX, y_pos
-				gfx.drawstr(lyric.text)
-				startX = startX + textW
-			end
-			
-			-- Añadir espacio después de cada grupo excepto el último
-			if i < #word_groups then
-				startX = startX + spaceWidth
-			end
-		end
-	end
-
+    local function renderPhrase(phrase, font_size, y_pos, alpha_mult)
+        if #phrase.lyrics == 0 then
+            gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, alpha_mult or 1
+            gfx.setfont(1, "SDK_JP_Web 85W", font_size)
+            local noLyricsText = "[No lyrics found]"
+            local textW, _ = gfx.measurestr(noLyricsText)
+            gfx.x, gfx.y = (gfx.w - textW) / 2, y_pos
+            gfx.drawstr(noLyricsText)
+            return
+        end
+        
+        -- Primero, agrupa las letras basándose en conectores
+        local word_groups = {}
+        local current_group = {}
+        
+        for i, lyric in ipairs(phrase.lyrics) do
+            table.insert(current_group, lyric)
+            
+            -- Si esta letra no termina con guion, o es la última letra de la frase,
+            -- cierra el grupo actual y comienza uno nuevo
+            if not lyric.endsWithHyphen or i == #phrase.lyrics then
+                table.insert(word_groups, current_group)
+                current_group = {}
+            end
+        end
+        
+        -- Ahora calcular el ancho total incluyendo espacios entre palabras
+        gfx.setfont(1, "SDK_JP_Web 85W", font_size)
+        local spaceWidth = gfx.measurestr(" ")
+        local totalWidth = 0
+        
+        for i, group in ipairs(word_groups) do
+            for _, lyric in ipairs(group) do
+                local textW, _ = gfx.measurestr(lyric.text)
+                totalWidth = totalWidth + textW
+            end
+            
+            -- Añadir espacio después de cada grupo excepto el último
+            if i < #word_groups then
+                totalWidth = totalWidth + spaceWidth
+            end
+        end
+        
+        -- Dibujar los grupos de palabras
+        local startX = (gfx.w - totalWidth) / 2
+        
+        for i, group in ipairs(word_groups) do
+            for j, lyric in ipairs(group) do
+                local textW, _ = gfx.measurestr(lyric.text)
+                
+                -- Establecer color basado en el estado, si es sin tono o si tiene Hero Power
+                if lyric.hasHeroPower then
+                    if lyric.isActive then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerActive.r, textColorHeroPowerActive.g, textColorHeroPowerActive.b, textColorHeroPowerActive.a * (alpha_mult or 1)
+                    elseif lyric.hasBeenSung then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPowerSung.r, textColorHeroPowerSung.g, textColorHeroPowerSung.b, textColorHeroPowerSung.a * (alpha_mult or 1)
+                    else
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorHeroPower.r, textColorHeroPower.g, textColorHeroPower.b, textColorHeroPower.a * (alpha_mult or 1)
+                    end
+                elseif lyric.isToneless then
+                    if lyric.isActive then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessActive.r, textColorTonelessActive.g, textColorTonelessActive.b, textColorTonelessActive.a * (alpha_mult or 1)
+                    elseif lyric.hasBeenSung then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorTonelessSung.r, textColorTonelessSung.g, textColorTonelessSung.b, textColorTonelessSung.a * (alpha_mult or 1)
+                    else
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorToneless.r, textColorToneless.g, textColorToneless.b, textColorToneless.a * (alpha_mult or 1)
+                    end
+                else
+                    if lyric.isActive then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorActive.r, textColorActive.g, textColorActive.b, textColorActive.a * (alpha_mult or 1)
+                    elseif lyric.hasBeenSung then
+                        gfx.r, gfx.g, gfx.b, gfx.a = textColorSung.r, textColorSung.g, textColorSung.b, textColorSung.a * (alpha_mult or 1)
+                    else
+                        if alpha_mult and alpha_mult < 1.0 then
+                            gfx.r, gfx.g, gfx.b, gfx.a = textColorNextPhrase.r, textColorNextPhrase.g, textColorNextPhrase.b, textColorNextPhrase.a * (alpha_mult or 1)
+                        else
+                            gfx.r, gfx.g, gfx.b, gfx.a = textColorInactive.r, textColorInactive.g, textColorInactive.b, textColorInactive.a * (alpha_mult or 1)
+                        end
+                    end
+                end
+                
+                gfx.x, gfx.y = startX, y_pos
+                gfx.drawstr(lyric.text)
+                startX = startX + textW
+            end
+            
+            -- Añadir espacio después de cada grupo excepto el último
+            if i < #word_groups then
+                startX = startX + spaceWidth
+            end
+        end
+    end
     
     -- Dibujar la frase actual con tamaño ajustado
     if currentPhraseObj then
-        -- Dibujar fondo para la frase actual
         gfx.r, gfx.g, gfx.b, gfx.a = bgColorLyrics.r, bgColorLyrics.g, bgColorLyrics.b, bgColorLyrics.a
         gfx.rect(20, visualizerY, gfx.w - 40, lyricsConfig.phraseHeight, 1)
-        
-        -- Renderizar la frase actual con tamaño de fuente ajustado
         renderPhrase(currentPhraseObj, lyricsConfig.fontSize.current, visualizerY + 6)
     end
     
     -- Dibujar la próxima frase con tamaño ajustado
     if nextPhraseObj then
-        -- Dibujar fondo para la próxima frase
         gfx.r, gfx.g, gfx.b, gfx.a = bgColorLyrics.r * 0.8, bgColorLyrics.g * 0.8, bgColorLyrics.b * 0.8, bgColorLyrics.a * 0.8
         gfx.rect(20, visualizerY + lyricsConfig.phraseHeight + lyricsConfig.phraseSpacing, 
                  gfx.w - 40, lyricsConfig.phraseHeight, 1)
-        
-        -- Renderizar la próxima frase con tamaño de fuente ajustado
         renderPhrase(nextPhraseObj, lyricsConfig.fontSize.next, 
                     visualizerY + lyricsConfig.phraseHeight + lyricsConfig.phraseSpacing + 6, 0.9)
     end
@@ -1909,22 +2029,23 @@ end
 function drawNotes()
     -- Recolectar todas las notas visibles primero
     local visibleNotes = {}
-    
+
+    -- Identificar notas visibles dentro del rango
     for i = curNote, #notes do
         local ntime = notes[i][1]
         -- Si la nota está más allá del rango visible, salir del bucle
         if ntime > curBeat + (4 / trackSpeed) then break end
         
         -- Añadir esta nota a la lista de visibles
-        table.insert(visibleNotes, i)
+        if ntime + notes[i][2] >= curBeat - (1 / trackSpeed) then
+            table.insert(visibleNotes, i)
+        end
     end
     
-    -- Ordenar notas visibles por tiempo, de más lejanas a más cercanas
-    table.sort(visibleNotes, function(a, b)
-        return notes[a][1] > notes[b][1]  -- Orden inverso (más lejos primero)
-    end)
+    -- Ordenar notas para que las más recientes se dibujen primero (evita solapamiento visual)
+    table.sort(visibleNotes, function(a, b) return notes[a][1] > notes[b][1] end)
     
-    -- Dibujar primero las líneas sustain (para todas las notas)
+    -- Dibujar las líneas de sustain (si las hay)
     for _, i in ipairs(visibleNotes) do
         local ntime = notes[i][1]
         local nlen = notes[i][2]
@@ -1937,19 +2058,10 @@ function drawNotes()
         local rtime = ((ntime - curBeat) * trackSpeed)
         local rend = (((ntime + nlen) - curBeat) * trackSpeed)
         
-        if nlen <= 0.27 then
-            rend = rtime
-        end
-        
+        if nlen <= 0.27 then rend = rtime end
         if rtime < 0 then rtime = 0 end
-        
-        if rend <= 0 and curNote ~= #notes and curend <= 0 then
-            curNote = i + 1
-        end
-
-        if rend > 4 then
-            rend = 4
-        end
+        if rend <= 0 and curNote ~= #notes and curend <= 0 then curNote = i + 1 end
+        if rend > 4 then rend = 4 end
         
         noteScale = imgScale * (1 - (nsm * rtime))
         noteScaleEnd = imgScale * (1 - (nsm * rend))
@@ -1957,36 +2069,23 @@ function drawNotes()
         local mappedLanes = mapLane(lane)
         
         for _, mappedLane in ipairs(mappedLanes) do
-            if diff < 4 then
-                mappedLane = mappedLane
-            end
-
+            if diff < 4 then mappedLane = mappedLane end
             susx = ((gfx.w / 2) + ((nxoff * (1 - (nxm * rtime))) * noteScale * (mappedLane - 2)))
             susy = gfx.h - (227 * noteScale) - ((nyoff * rtime) * noteScale)
             endx = ((gfx.w / 2) + ((nxoff * (1 - (nxm * rend))) * noteScaleEnd * (mappedLane - 2)))
             endy = gfx.h - (219.5 * noteScaleEnd) - ((nyoff * rend) * noteScaleEnd)
             
-            -- Solo dibujar las líneas sustain si la nota todavía está parcialmente visible
             if rend >= -0.05 and rend > rtime then
-                gfx.r = 0.9
-                gfx.g = 0.9
-                gfx.b = 0.9
-                gfx.line(susx-5,susy,endx-5,endy,5)
-                gfx.line(susx-4,susy,endx-4,endy,4)
-                gfx.line(susx-3,susy,endx-3,endy,3)
-                gfx.line(susx-2,susy,endx-2,endy,2)
-                gfx.line(susx-1,susy,endx-1,endy,1)
-                gfx.line(susx,susy,endx,endy,1)
-                gfx.line(susx+1,susy,endx+1,endy,1)
-                gfx.line(susx+2,susy,endx+2,endy,2)
-                gfx.line(susx+3,susy,endx+3,endy,3)
-                gfx.line(susx+4,susy,endx+4,endy,4)
-                gfx.line(susx+5,susy,endx+5,endy,5)
+                -- Las líneas de sustain no tendrán fade-in para mantener claridad
+                gfx.set(0.9, 0.9, 0.9, 1)
+                for j = -5, 5 do
+                    gfx.line(susx + j, susy, endx + j, endy, math.abs(j) + 1)
+                end
             end
         end
     end
     
-    -- Ahora dibujar las cabezas de las notas Y sus heroicons (de más lejanas a más cercanas)
+    -- Dibujar las notas con fade-in rápido (sin fade-out)
     for _, i in ipairs(visibleNotes) do
         local ntime = notes[i][1]
         local nlen = notes[i][2]
@@ -1998,117 +2097,94 @@ function drawNotes()
         local rtime = ((ntime - curBeat) * trackSpeed)
         local rend = (((ntime + nlen) - curBeat) * trackSpeed)
         
-        if nlen <= 0.27 then
-            rend = rtime
-        end
-        
+        if nlen <= 0.27 then rend = rtime end
         if rtime < 0 then rtime = 0 end
-        
-        if rend > 4 then
-            rend = 4
-        end
+        if rend > 4 then rend = 4 end
         
         noteScale = imgScale * (1 - (nsm * rtime))
+        
+        -- Calcular opacidad para un fade-in rápido
+        local fadeDistance = 0.35 -- Distancia en beats para un fade-in rápido (ajusta este valor para hacerlo más rápido o lento)
+        local alpha = 1 -- Por defecto, opacidad completa
+        if rtime > (4 - fadeDistance) then
+            -- Aplicar fade-in cuando la nota está en el rango superior del highway
+            alpha = math.min(1, math.max(0, (rtime - (4 - fadeDistance)) / fadeDistance))
+            alpha = 1 - alpha -- Invertimos para que el fade-in sea de 0 a 1
+        end
         
         local mappedLanes = mapLane(lane)
         
         for laneIndex, mappedLane in ipairs(mappedLanes) do
-            if diff < 4 then
-                mappedLane = mappedLane
-            end
-
-            -- La posición Y sigue siendo la misma para todas las notas
+            if diff < 4 then mappedLane = mappedLane end
             notey = gfx.h - (82.3 * noteScale) - (243 * noteScale) - ((nyoff * rtime) * noteScale)
             
-            -- Solo dibujar la cabeza de la nota si está visible
             if rend >= -0.05 then
                 local gfxid = 2
-                local noteWidth = 128  -- Ancho predeterminado para notas normales
-                local noteHeight = 128 -- Alto predeterminado para notas normales
-                local xOffset = 63 * noteScale  -- Offset X predeterminado para centrar
-                local srcX = 0  -- Posición X en la textura fuente (por defecto 0)
-                local useSpecialHeroImage = false  -- Flag para determinar si usamos una imagen especial
+                local noteWidth = 128
+                local noteHeight = 128
+                local xOffset = 63 * noteScale
+                local srcX = 0
+                local useSpecialHeroImage = false
                 
-                if lane == 1 then gfxid = 7 -- white_note_1
-                elseif lane == 2 then gfxid = 7 -- white_note_2
-                elseif lane == 3 then gfxid = 7 -- white_note_3
-                elseif lane == 4 then gfxid = 8 -- black_note_1
-                elseif lane == 5 then gfxid = 8 -- black_note_2
-                elseif lane == 6 then gfxid = 8 -- black_note_3
+                if lane == 1 then gfxid = 7
+                elseif lane == 2 then gfxid = 7
+                elseif lane == 3 then gfxid = 7
+                elseif lane == 4 then gfxid = 8
+                elseif lane == 5 then gfxid = 8
+                elseif lane == 6 then gfxid = 8
                 end
                 
                 if lane == 0 then
-                    -- Si es una nota open y tiene heropower, usar la imagen especial
                     if heropower then
-                        gfxid = 15  -- open_note_herocollect
-                        useSpecialHeroImage = true  -- Marcar que ya estamos usando una imagen especial
+                        gfxid = 15
+                        useSpecialHeroImage = true
                     else
-                        gfxid = 10  -- open_note normal
+                        gfxid = 10
                     end
-                    
-                    -- Dividir la nota open entre los tres carriles
-                    if #mappedLanes == 3 then  -- Si estamos usando los tres carriles para la nota open
-                        -- Dividir el ancho total (540) en tres partes aproximadamente iguales
-                        local partWidth = math.floor(540 / 3)  -- Aproximadamente 180px por parte
+                    if #mappedLanes == 3 then
+                        local partWidth = math.floor(540 / 3)
                         noteWidth = partWidth
-                        xOffset = (partWidth/2) * noteScale  -- Centrar cada parte
-                        
-                        -- Determinar qué parte dibujar basado en el carril actual
-                        if laneIndex == 1 then       -- Primer carril (izquierdo)
-                            srcX = 0                 -- Primera parte de la textura
-                        elseif laneIndex == 2 then   -- Segundo carril (centro)
-                            srcX = partWidth         -- Segunda parte de la textura
-                        else                         -- Tercer carril (derecho)
-                            srcX = partWidth * 2     -- Tercera parte de la textura
-                            -- Ajustar para que la última parte incluya todos los píxeles restantes
-                            if laneIndex == 3 then
-                                noteWidth = 540 - (partWidth * 2)  -- Asegurar que usamos todos los píxeles
-                            end
+                        xOffset = (partWidth/2) * noteScale
+                        if laneIndex == 1 then srcX = 0
+                        elseif laneIndex == 2 then srcX = partWidth
+                        else
+                            srcX = partWidth * 2
+                            if laneIndex == 3 then noteWidth = 540 - (partWidth * 2) end
                         end
                     else
-                        -- Si por alguna razón no hay tres carriles, usar toda la textura
                         noteWidth = 540
                         xOffset = 245 * noteScale
                     end
                 end
-
-                if square then gfxid = 9 end  -- Cambiar a la imagen square
+                
+                if square then gfxid = 9 end
                 if hopo_notes then
                     if lane == 1 or lane == 2 or lane == 3 then
-                        if square then
-                            gfxid = 13 -- white_hopo_square_note
-                        else
-                            gfxid = 11 -- white_hopo_note
-                        end
+                        if square then gfxid = 13 else gfxid = 11 end
                     elseif lane == 4 or lane == 5 or lane == 6 then
-                        if square then
-                            gfxid = 13 -- black_hopo_square_note
-                        else
-                            gfxid = 12 -- black_hopo_note
-                        end
+                        if square then gfxid = 13 else gfxid = 12 end
                     end
                 end
-
-                -- Calcular la posición X ajustada basada en el ancho de la nota y el carril
-                local adjustedNoteX = ((gfx.w / 2) - xOffset + ((nxoff * (1 - (nxm * rtime))) * noteScale * (mappedLane - 2)))
                 
-                -- Dibujar la nota con sus dimensiones correctas, usando la parte apropiada de la textura
+                local adjustedNoteX = ((gfx.w / 2) - xOffset + ((nxoff * (1 - (nxm * rtime))) * noteScale * (mappedLane - 2)))
+                -- Aplicar opacidad al dibujar la nota
+                gfx.a = alpha
                 gfx.blit(gfxid, noteScale, 0, srcX, 0, noteWidth, noteHeight, adjustedNoteX, notey)
                 
-                -- Dibujar el icono Hero Power aquí mismo, si esta nota lo tiene Y no estamos usando una imagen especial
                 if heropower and not useSpecialHeroImage then
-                    -- Offset estándar para Hero Power
                     local heroXOffset = 62 * noteScale
-                    
                     local heroNoteX = ((gfx.w / 2) - heroXOffset + ((nxoff * (1 - (nxm * rtime))) * noteScale * (mappedLane - 2)))
                     local heroNoteY = gfx.h - (79.5 * noteScale) - (243 * noteScale) - ((nyoff * rtime) * noteScale)
-                    
-                    local heroGfxId = 14 -- Hero Power icon
+                    local heroGfxId = 14
+                    -- Aplicar opacidad al icono de Hero Power
+                    gfx.a = alpha
                     gfx.blit(heroGfxId, noteScale, 0, 0, 0, 128, 128, heroNoteX, heroNoteY)
                 end
             end
         end
     end
+    -- Restaurar opacidad por defecto para otros elementos
+    gfx.a = 1
 end
 
 function updateBeatLines()

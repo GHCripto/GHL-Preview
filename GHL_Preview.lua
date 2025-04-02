@@ -11,10 +11,10 @@ trackSpeed=1.80
 inst=1 -- Guitar 3x2 (GHL)
 diff=4 -- Expert
 pR={
-	{{58,64},{120,121}}, -- Normal notes = Easy | Lift notes = Easy (not used)
-	{{70,76},{122,123}}, -- Normal notes = Medium | Lift notes = Medium (not used)
-	{{82,88},{124,125}}, -- Normal notes = Hard | Lift notes = Hard (not used)
-	{{94,100},{126,127}} -- Normal notes = Expert | Lift notes = Expert (not used)
+	{{58,64}}, -- Normal notes = Easy
+	{{70,76}}, -- Normal notes = Medium
+	{{82,88}}, -- Normal notes = Hard
+	{{94,100}} -- Normal notes = Expert
 }
 
 -- Rastrea el proyecto actual
@@ -512,14 +512,6 @@ function parseNotes(take)
                 notes[noteIndex][2] = nend - ntime
             else
                 table.insert(notes, {ntime, nend - ntime, lane, false, false})
-            end
-        elseif pitch >= pR[diff][2][1] and pitch <= pR[diff][2][2] then
-            lane = pitch - pR[diff][2][1]
-            noteIndex = getNoteIndex(ntime, lane)
-            if noteIndex ~= -1 then
-                notes[noteIndex][4] = true
-            else
-                table.insert(notes, {ntime, -1, lane, true, false})
             end
         end
     end

@@ -2008,16 +2008,6 @@ function mapLane(lane)
     return {(lane - 1) % 3 + 1}  -- Devuelve una tabla con un único carril
 end
 
-function mapLane(lane)
-    -- Si el carril es 0 (open note), asignar a los tres carriles para máxima perspectiva
-    if lane == 0 then
-        return {1, 2, 3}  -- Devuelve una tabla con los tres carriles
-    end
-    
-    -- Se ajusta el mapeo para que el carril sea correctamente asignado
-    return {(lane - 1) % 3 + 1}  -- Devuelve una tabla con un único carril
-end
-
 function drawNotes()
     -- Recolectar todas las notas visibles primero
     local visibleNotes = {}

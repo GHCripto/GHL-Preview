@@ -24,7 +24,9 @@ This new version includes:
   Lyrics marked as Star Power / Hero Power will be displayed in **yellow**.  
   Notes **26** and **29**, as well as notes marked as pitchless **"#"**, will be vertically centered in the vocal HUD (as in GHL).
 
-![image](https://github.com/user-attachments/assets/1c5af98d-c0bd-4497-a879-1089664d07ab)
+![image](https://github.com/user-attachments/assets/0c4f9c5f-c603-405a-8852-b0d2ffa2d9bd)
+
+
 
 ## Installation instructions:
 1. Download .zip of repository
@@ -37,7 +39,7 @@ This new version includes:
 
 ## Additional notes:
 For a better experience, use the included color map and note names!  
-Guitar events (106 to 114 and 118) are exclusive for Guitar Hero Live (sfx preview included).  
+Guitar events (105 to 114 and 118) are exclusive for Guitar Hero Live (sfx preview included).  
 Requires **Genshin Impact** font (SDK_JP_WEB 85W), extract it yourself.
 
 ## Modified by GHCripto:

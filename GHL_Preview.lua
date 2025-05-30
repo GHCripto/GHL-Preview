@@ -20,6 +20,13 @@ pR={
 -- Rastrea el proyecto actual
 local currentProject = reaper.EnumProjects(-1)
 
+-- Agregar estas variables globales al principio del script
+local notesPlayed = 0        -- Contador de notas que han tocado el recogedor
+local totalNotes = 0         -- Total de notas en la canción
+local countedNoteTimes = {}  -- Tabla para almacenar los tiempos de notas que ya han sido contados
+local prevCurBeat = 0        -- Para detectar cambios en el tiempo actual
+local lastPlayPosition = 0   -- Para detectar retrocesos en la canción
+
 -- Variables para los botones de interacción
 local difficultyButtons = {}
 local speedButtons = {}
@@ -49,9 +56,9 @@ local textColorTonelessActive = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}  -- Blanco 
 local textColorTonelessSung = {r = 0.75, g = 0.75, b = 0.75, a = 1.0}  -- Blanco puro para letras sin tono ya cantadas
 
 -- Colores en la sección de colores al inicio del script
-local textColorHeroPower = {r = 1.0, g = 1.0, b = 0.15, a = 1.0}        -- Amarillo para letras con Hero Power
+local textColorHeroPower = {r = 1.0, g = 1.0, b = 0.15, a = 1.0}  -- Amarillo para letras con Hero Power
 local textColorHeroPowerActive = {r = 1.0, g = 0.5, b = 0.3, a = 1.0}  -- Amarillo brillante para letras Hero Power activas
-local textColorHeroPowerSung = {r = 0.9764706, g = 0.8999952, b = 0.5372549, a = 1.0}    -- Amarillo más oscuro para letras Hero Power ya cantadas
+local textColorHeroPowerSung = {r = 0.9764706, g = 0.8999952, b = 0.5372549, a = 1.0}  -- Amarillo más oscuro para letras Hero Power ya cantadas
 
 -- Variables configurables para ajustar la posición y tamaño del visualizador de letras
 local lyricsConfig = {
@@ -89,6 +96,10 @@ local vocalsHash = ""
 -- Rastrea el tiempo anterior
 local lastBeatTime = 0
 
+force_strum_marker_expert=102 -- Force Strum marker
+force_strum_marker_hard=90 -- Force Strum marker
+force_strum_marker_medium=78 -- Force Strum marker
+force_strum_marker_easy=66 -- Force Strum marker
 hopo_marker_expert=101 -- Hopo marker
 hopo_marker_hard=89 -- Hopo marker
 hopo_marker_medium=77 -- Hopo marker
@@ -106,7 +117,7 @@ curNote=1
 nxoff=178 -- X offset
 nxm=0.15 -- X mult of offset
 nyoff=150.5 -- Y offset
-nsm=0.05 -- Scale multiplier
+nsm=0.046 -- Scale multiplier
 
 lastCursorTime=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetCursorPosition())
 
@@ -201,14 +212,98 @@ function drawDifficultyButtons()
     end
 end
 
--- Función para dibujar los controles de Highway Speed
+-- Variables globales para rastrear qué botones están siendo presionados
+local activeButtons = {
+    speed = {left = false, right = false},
+    offset = {left = false, right = false}
+}
+
+-- Función mejorada para dibujar flechas de alta calidad
+local function drawHDArrow(x, y, isLeftArrow, radius, isActive)
+    -- Guardar estado original
+    local orig_a = gfx.a
+    
+    -- Color base de la flecha según estado
+    if isActive then
+        gfx.r, gfx.g, gfx.b = 1, 1, 0.7 -- Flecha amarilla brillante cuando está presionada
+    else
+        gfx.r, gfx.g, gfx.b = 1, 1, 1 -- Flecha blanca normal
+    end
+
+    -- Escala y dimensiones
+    local arrowWidth = radius * 0.6
+    local arrowLength = radius * 0.9
+    
+    -- Coordenadas base para la flecha
+    local points = {}
+    if isLeftArrow then
+        -- Punta de la flecha a la izquierda
+        points = {
+            {x - arrowLength * 0.6, y},                        -- Punta
+            {x + arrowLength * 0.4, y - arrowWidth},           -- Esquina superior derecha
+            {x + arrowLength * 0.2, y - arrowWidth * 0.5},     -- Punto de control superior
+            {x + arrowLength * 0.2, y + arrowWidth * 0.5},     -- Punto de control inferior
+            {x + arrowLength * 0.4, y + arrowWidth}            -- Esquina inferior derecha
+        }
+    else
+        -- Punta de la flecha a la derecha
+        points = {
+            {x + arrowLength * 0.6, y},                        -- Punta
+            {x - arrowLength * 0.4, y - arrowWidth},           -- Esquina superior izquierda
+            {x - arrowLength * 0.2, y - arrowWidth * 0.5},     -- Punto de control superior
+            {x - arrowLength * 0.2, y + arrowWidth * 0.5},     -- Punto de control inferior
+            {x - arrowLength * 0.4, y + arrowWidth}            -- Esquina inferior izquierda
+        }
+    end
+    
+    -- Técnica multi-paso para crear una flecha suave
+    
+    -- 1. Dibujar el cuerpo principal de la flecha con antialiasing
+    gfx.a = 1.0 -- Opacidad completa para el cuerpo principal
+    gfx.triangle(points[1][1], points[1][2], 
+                 points[2][1], points[2][2], 
+                 points[5][1], points[5][2], 1) -- Triángulo principal con fill
+    
+    -- 2. Dibujar los bordes con líneas más finas para suavizar
+    gfx.a = 0.8
+    -- Línea de punta a esquina superior
+    gfx.line(points[1][1], points[1][2], points[2][1], points[2][2], 0.5)
+    -- Línea de punta a esquina inferior
+    gfx.line(points[1][1], points[1][2], points[5][1], points[5][2], 0.5)
+    -- Línea de base (conectando las esquinas)
+    gfx.line(points[2][1], points[2][2], points[5][1], points[5][2], 0.5)
+    
+    -- 3. Añadir resalte para dar efecto 3D
+    gfx.a = 0.4
+    if isLeftArrow then
+        gfx.line(points[1][1] + 1, points[1][2] - 1, points[2][1] - 1, points[2][2] + 1, 0.5)
+    else
+        gfx.line(points[1][1] - 1, points[1][2] - 1, points[2][1] + 1, points[2][2] + 1, 0.5)
+    end
+    
+    -- 4. Añadir brillo adicional en el borde de ataque
+    if isActive then
+        gfx.a = 0.5
+        gfx.r, gfx.g, gfx.b = 1, 1, 0.5
+        if isLeftArrow then
+            gfx.line(points[1][1], points[1][2] - 1, points[1][1], points[1][2] + 1, 1)
+        else
+            gfx.line(points[1][1], points[1][2] - 1, points[1][1], points[1][2] + 1, 1)
+        end
+    end
+    
+    -- Restaurar opacidad original
+    gfx.a = orig_a
+end
+
+-- Función para dibujar los controles de Highway Speed con botones circulares mejorados
 function drawSpeedControls()
-    local buttonWidth = 25
-    local buttonHeight = 25
+    local buttonRadius = 12 -- Radio del círculo
     local spacing = 5
     local textStartX = 12
-    local speedTextY = 115 -- Ajustado para estar más cerca de Snap
-    local buttonStartX = 238 -- Posición fija para los botones
+    local speedTextY = 113 -- Posición Y
+    local leftButtonX = 145 -- Posición X del primer botón
+    local rightButtonX = leftButtonX + (buttonRadius * 2) + spacing
     
     speedButtons = {}
     
@@ -216,53 +311,78 @@ function drawSpeedControls()
     gfx.r, gfx.g, gfx.b = 0.77, 0.81, 0.96
     gfx.setfont(1, "SDK_JP_Web 85W", 25) -- Genshin Impact font
     gfx.x, gfx.y = textStartX, speedTextY
-    gfx.drawstr("Highway Speed: " .. formatNumber(trackSpeed, 2))
+    gfx.drawstr("Speed: " .. formatNumber(trackSpeed, 2))
     
-    -- Botón para disminuir velocidad
-    gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3
-    gfx.rect(buttonStartX, speedTextY, buttonWidth, buttonHeight, 1)
+    -- Función auxiliar para dibujar un botón circular con flecha HD
+    local function drawCircleButton(x, y, isLeftArrow, isActive)
+        -- Fondo del círculo (más brillante si está activo)
+        if isActive then
+            gfx.r, gfx.g, gfx.b = 0.3, 0.5, 0.7 -- Color azul cuando está presionado
+        else
+            gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3 -- Color normal
+        end
+        gfx.circle(x, y, buttonRadius, 1)
+        
+        -- Borde del círculo
+        gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
+        gfx.circle(x, y, buttonRadius, 0)
+        
+        -- Dibujar la flecha HD
+        drawHDArrow(x, y, isLeftArrow, buttonRadius, isActive)
+        
+        -- Efecto de brillo adicional cuando está activo
+        if isActive then
+            -- Guardar la opacidad actual
+            local orig_a = gfx.a
+            
+            -- Establecer opacidad para el halo
+            gfx.a = 0.3 -- Semi-transparente
+            gfx.r, gfx.g, gfx.b = 1, 1, 0.5
+            gfx.circle(x, y, buttonRadius * 1.2, 0) -- Halo exterior
+            
+            -- Restaurar la opacidad original
+            gfx.a = orig_a
+        end
+    end
     
-    -- Borde del botón
-    gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
-    gfx.rect(buttonStartX, speedTextY, buttonWidth, buttonHeight, 0)
+    -- Dibujar botón para disminuir (izquierda) con estado activo
+    drawCircleButton(leftButtonX + buttonRadius, speedTextY + buttonRadius, true, activeButtons.speed.left)
     
-    -- Triángulo izquierdo (disminuir)
-    gfx.r, gfx.g, gfx.b = 1, 1, 1
-    gfx.triangle(
-        buttonStartX + buttonWidth - 8, speedTextY + 5,
-        buttonStartX + buttonWidth - 8, speedTextY + buttonHeight - 5,
-        buttonStartX + 8, speedTextY + buttonHeight/2
-    )
+    -- Dibujar botón para aumentar (derecha) con estado activo
+    drawCircleButton(rightButtonX + buttonRadius, speedTextY + buttonRadius, false, activeButtons.speed.right)
     
-    -- Botón para aumentar velocidad
-    gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3
-    gfx.rect(buttonStartX + buttonWidth + spacing, speedTextY, buttonWidth, buttonHeight, 1)
+    -- Guardar las coordenadas para la detección de clics
+    speedButtons[1] = {
+        x = leftButtonX, 
+        y = speedTextY, 
+        width = buttonRadius * 2, 
+        height = buttonRadius * 2, 
+        action = "decrease",
+        centerX = leftButtonX + buttonRadius,
+        centerY = speedTextY + buttonRadius,
+        radius = buttonRadius
+    }
     
-    -- Borde del botón
-    gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
-    gfx.rect(buttonStartX + buttonWidth + spacing, speedTextY, buttonWidth, buttonHeight, 0)
-    
-    -- Triángulo derecho (aumentar)
-    gfx.r, gfx.g, gfx.b = 1, 1, 1
-    gfx.triangle(
-        buttonStartX + buttonWidth + spacing + 8, speedTextY + 5,
-        buttonStartX + buttonWidth + spacing + 8, speedTextY + buttonHeight - 5,
-        buttonStartX + buttonWidth + spacing + buttonWidth - 8, speedTextY + buttonHeight/2
-    )
-    
-    -- Guarda los botones de velocidad
-    speedButtons[1] = {x = buttonStartX, y = speedTextY, width = buttonWidth, height = buttonHeight, action = "decrease"}
-    speedButtons[2] = {x = buttonStartX + buttonWidth + spacing, y = speedTextY, width = buttonWidth, height = buttonHeight, action = "increase"}
+    speedButtons[2] = {
+        x = rightButtonX, 
+        y = speedTextY, 
+        width = buttonRadius * 2, 
+        height = buttonRadius * 2, 
+        action = "increase",
+        centerX = rightButtonX + buttonRadius,
+        centerY = speedTextY + buttonRadius,
+        radius = buttonRadius
+    }
 end
 
--- Función para dibujar los controles de Offset
+-- Función para dibujar los controles de Offset con botones circulares mejorados
 function drawOffsetControls()
-    local buttonWidth = 25
-    local buttonHeight = 25
+    local buttonRadius = 12 -- Radio del círculo
     local spacing = 5
     local textStartX = 12
-    local offsetTextY = 145 -- Ajustado para estar más cerca del texto "Highway Speed"
-    local buttonStartX = 160 -- Posición fija para los botones (más cerca del texto que los de Speed)
+    local offsetTextY = 140 -- Ajustado para estar debajo de Speed
+    local leftButtonX = 160 -- Posición X del primer botón
+    local rightButtonX = leftButtonX + (buttonRadius * 2) + spacing
     
     offsetButtons = {}
     
@@ -272,41 +392,73 @@ function drawOffsetControls()
     gfx.x, gfx.y = textStartX, offsetTextY
     gfx.drawstr("Offset: " .. formatNumber(offset, 2))
     
-    -- Botón para disminuir offset
-    gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3
-    gfx.rect(buttonStartX, offsetTextY, buttonWidth, buttonHeight, 1)
+    -- Función auxiliar para dibujar un botón circular con flecha HD
+    local function drawCircleButton(x, y, isLeftArrow, isActive)
+        -- Fondo del círculo (más brillante si está activo)
+        if isActive then
+            gfx.r, gfx.g, gfx.b = 0.3, 0.5, 0.7 -- Color azul cuando está presionado
+        else
+            gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3 -- Color normal
+        end
+        gfx.circle(x, y, buttonRadius, 1)
+        
+        -- Borde del círculo
+        gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
+        gfx.circle(x, y, buttonRadius, 0)
+        
+        -- Dibujar la flecha HD
+        drawHDArrow(x, y, isLeftArrow, buttonRadius, isActive)
+        
+        -- Efecto de brillo adicional cuando está activo
+        if isActive then
+            -- Guardar la opacidad actual
+            local orig_a = gfx.a
+            
+            -- Establecer opacidad para el halo
+            gfx.a = 0.3 -- Semi-transparente
+            gfx.r, gfx.g, gfx.b = 1, 1, 0.5
+            gfx.circle(x, y, buttonRadius * 1.2, 0) -- Halo exterior
+            
+            -- Restaurar la opacidad original
+            gfx.a = orig_a
+        end
+    end
     
-    -- Borde del botón
-    gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
-    gfx.rect(buttonStartX, offsetTextY, buttonWidth, buttonHeight, 0)
+    -- Dibujar botón para disminuir (izquierda) con estado activo
+    drawCircleButton(leftButtonX + buttonRadius, offsetTextY + buttonRadius, true, activeButtons.offset.left)
     
-    -- Triángulo izquierdo (disminuir)
-    gfx.r, gfx.g, gfx.b = 1, 1, 1
-    gfx.triangle(
-        buttonStartX + buttonWidth - 8, offsetTextY + 5,
-        buttonStartX + buttonWidth - 8, offsetTextY + buttonHeight - 5,
-        buttonStartX + 8, offsetTextY + buttonHeight/2
-    )
+    -- Dibujar botón para aumentar (derecha) con estado activo
+    drawCircleButton(rightButtonX + buttonRadius, offsetTextY + buttonRadius, false, activeButtons.offset.right)
     
-    -- Botón para aumentar offset
-    gfx.r, gfx.g, gfx.b = 0.2, 0.2, 0.3
-    gfx.rect(buttonStartX + buttonWidth + spacing, offsetTextY, buttonWidth, buttonHeight, 1)
+    -- Guardar las coordenadas para la detección de clics
+    offsetButtons[1] = {
+        x = leftButtonX, 
+        y = offsetTextY, 
+        width = buttonRadius * 2, 
+        height = buttonRadius * 2, 
+        action = "decrease",
+        centerX = leftButtonX + buttonRadius,
+        centerY = offsetTextY + buttonRadius,
+        radius = buttonRadius
+    }
     
-    -- Borde del botón
-    gfx.r, gfx.g, gfx.b = 0.8, 0.8, 0.9
-    gfx.rect(buttonStartX + buttonWidth + spacing, offsetTextY, buttonWidth, buttonHeight, 0)
-    
-    -- Triángulo derecho (aumentar)
-    gfx.r, gfx.g, gfx.b = 1, 1, 1
-    gfx.triangle(
-        buttonStartX + buttonWidth + spacing + 8, offsetTextY + 5,
-        buttonStartX + buttonWidth + spacing + 8, offsetTextY + buttonHeight - 5,
-        buttonStartX + buttonWidth + spacing + buttonWidth - 8, offsetTextY + buttonHeight/2
-    )
-    
-    -- Guarda los botones de offset
-    offsetButtons[1] = {x = buttonStartX, y = offsetTextY, width = buttonWidth, height = buttonHeight, action = "decrease"}
-    offsetButtons[2] = {x = buttonStartX + buttonWidth + spacing, y = offsetTextY, width = buttonWidth, height = buttonHeight, action = "increase"}
+    offsetButtons[2] = {
+        x = rightButtonX, 
+        y = offsetTextY, 
+        width = buttonRadius * 2, 
+        height = buttonRadius * 2, 
+        action = "increase",
+        centerX = rightButtonX + buttonRadius,
+        centerY = offsetTextY + buttonRadius,
+        radius = buttonRadius
+    }
+end
+
+-- No olvides incluir la función para detectar clics en círculos
+function isPointInCircle(x, y, button)
+    local dx = x - button.centerX
+    local dy = y - button.centerY
+    return (dx*dx + dy*dy) <= (button.radius * button.radius)
 end
 
 -- Función para dibujar un botón para activar/desactivar letras
@@ -381,7 +533,7 @@ function drawNotesHUDToggleButton()
     return {x = x, y = y, width = buttonWidth, height = buttonHeight}
 end
 
--- Función para manejar clics en los botones
+-- Modificar la función handleMouseClick para actualizar los estados activos
 function handleMouseClick(x, y)
     -- Comprobar botones de dificultad
     for i, button in ipairs(difficultyButtons) do
@@ -398,14 +550,14 @@ function handleMouseClick(x, y)
     
     -- Comprobar botones de velocidad
     for i, button in ipairs(speedButtons) do
-        if x >= button.x and x <= button.x + button.width and 
-           y >= button.y and y <= button.y + button.height then
-           
+        if isPointInCircle(x, y, button) then
             if button.action == "decrease" then
+                activeButtons.speed.left = true
                 if trackSpeed > 0.25 then 
                     trackSpeed = trackSpeed - 0.05 
                 end
             elseif button.action == "increase" then
+                activeButtons.speed.right = true
                 trackSpeed = trackSpeed + 0.05
             end
             return true
@@ -414,12 +566,12 @@ function handleMouseClick(x, y)
     
     -- Comprobar botones de offset
     for i, button in ipairs(offsetButtons) do
-        if x >= button.x and x <= button.x + button.width and 
-           y >= button.y and y <= button.y + button.height then
-           
+        if isPointInCircle(x, y, button) then
             if button.action == "decrease" then
+                activeButtons.offset.left = true
                 offset = offset - 0.01
             elseif button.action == "increase" then
+                activeButtons.offset.right = true
                 offset = offset + 0.01
             end
             return true
@@ -448,8 +600,16 @@ function handleMouseClick(x, y)
     return false
 end
 
+-- Añadir función para restablecer estados activos cuando se suelta el clic
+function handleMouseRelease()
+    activeButtons.speed.left = false
+    activeButtons.speed.right = false
+    activeButtons.offset.left = false
+    activeButtons.offset.right = false
+end
+
 gfx.clear = rgb2num(35, 38, 52) -- Background color
-gfx.init("GHL Preview", 700, 700, 0, 1150, 50) -- Wight, Geight, X Pos, Y Pos.
+gfx.init("GHL Preview", 700, 700, 0, 1211, 43) -- Wight, Geight, X Pos, Y Pos.
 
 local script_folder = string.gsub(debug.getinfo(1).source:match("@?(.*[\\|/])"),"\\","/")
 highway = gfx.loadimg(1,script_folder.."assets/highway.png")
@@ -477,41 +637,50 @@ function parseNotes(take)
     hopomark_hard = {}
     hopomark_medium = {}
     hopomark_easy = {}
-    heropower = false
-    cur_heropower_phrase = 1
-    cur_hopo_marker_expert = 1
-    cur_hopo_marker_hard = 1
-    cur_hopo_marker_medium = 1
-    cur_hopo_marker_easy = 1
+    force_strum_markers_expert = {}
+    force_strum_markers_hard = {}
+    force_strum_markers_medium = {}
+    force_strum_markers_easy = {}
+    
     _, notecount = reaper.MIDI_CountEvts(take)
     
+    -- Margen pequeño para evitar conflictos en los límites
+    local MARGIN = 0.001 -- Ajusta este valor según necesites
+    
+    -- Primera pasada: Recopilar todos los marcadores y notas
     for i = 0, notecount - 1 do
         _, _, _, spos, epos, _, pitch, _ = reaper.MIDI_GetNote(take, i)
         ntime = reaper.MIDI_GetProjQNFromPPQPos(take, spos)
         nend = reaper.MIDI_GetProjQNFromPPQPos(take, epos)
         
         if pitch == hopo_marker_expert then
-            table.insert(hopomark_expert, {ntime, nend}) -- Hopo marker (Expert)
-
+            -- Añadir marcador con margen pequeño al final
+            table.insert(hopomark_expert, {ntime, nend - MARGIN}) -- Hopo marker (Expert)
         elseif pitch == hopo_marker_hard then
-            table.insert(hopomark_hard, {ntime, nend}) -- Hopo marker (Hard)
-
+            table.insert(hopomark_hard, {ntime, nend - MARGIN}) -- Hopo marker (Hard)
         elseif pitch == hopo_marker_medium then
-            table.insert(hopomark_medium, {ntime, nend}) -- Hopo marker (Medium)
-
+            table.insert(hopomark_medium, {ntime, nend - MARGIN}) -- Hopo marker (Medium)
         elseif pitch == hopo_marker_easy then
-            table.insert(hopomark_easy, {ntime, nend}) -- Hopo marker (Easy)
-
+            table.insert(hopomark_easy, {ntime, nend - MARGIN}) -- Hopo marker (Easy)
+        elseif pitch == force_strum_marker_expert then
+            table.insert(force_strum_markers_expert, {ntime, nend - MARGIN}) -- Force Strum (Expert)
+        elseif pitch == force_strum_marker_hard then
+            table.insert(force_strum_markers_hard, {ntime, nend - MARGIN}) -- Force Strum (Hard)
+        elseif pitch == force_strum_marker_medium then
+            table.insert(force_strum_markers_medium, {ntime, nend - MARGIN}) -- Force Strum (Medium)
+        elseif pitch == force_strum_marker_easy then
+            table.insert(force_strum_markers_easy, {ntime, nend - MARGIN}) -- Force Strum (Easy)
         elseif pitch == HP then
-            table.insert(heropower_phrases, {ntime, nend}) -- Hero Power marker
-
+            table.insert(heropower_phrases, {ntime, nend - MARGIN}) -- Hero Power marker
         elseif pitch >= pR[diff][1][1] and pitch <= pR[diff][1][2] then
             lane = pitch - pR[diff][1][1]
             noteIndex = getNoteIndex(ntime, lane)
             if noteIndex ~= -1 then
                 notes[noteIndex][2] = nend - ntime
             else
-                table.insert(notes, {ntime, nend - ntime, lane, false, false})
+                -- Inicializar nota con valores por defecto 
+                -- (tiempo, duración, carril, sustain, square, heropower, hopo)
+                table.insert(notes, {ntime, nend - ntime, lane, false, false, false, false})
             end
         end
     end
@@ -552,72 +721,79 @@ function parseNotes(take)
     end
     
     -- Identificar el estado de notas Hero Power
-    if #heropower_phrases ~= 0 then
+    if #heropower_phrases > 0 then
         for i = 1, #notes do
-            if notes[i][1] > heropower_phrases[cur_heropower_phrase][2] then
-                if cur_heropower_phrase < #heropower_phrases then cur_heropower_phrase = cur_heropower_phrase + 1 end
-            end
-            if notes[i][1] >= heropower_phrases[cur_heropower_phrase][1] and notes[i][1] < heropower_phrases[cur_heropower_phrase][2] then
-                notes[i][6] = true
+            local noteTime = notes[i][1]
+            
+            for j = 1, #heropower_phrases do
+                local markerStart = heropower_phrases[j][1]
+                local markerEnd = heropower_phrases[j][2]
+                
+                if noteTime >= markerStart and noteTime <= markerEnd then
+                    notes[i][6] = true -- Marcar como Hero Power
+                    break
+                end
             end
         end
     end
 
-	-- Identificar notas HOPO (Expert)
-	if #hopomark_expert ~= 0 then
-		for i = 1, #notes do
-			if notes[i][1] > hopomark_expert[cur_hopo_marker_expert][2] then
-				if cur_hopo_marker_expert < #hopomark_expert then cur_hopo_marker_expert = cur_hopo_marker_expert + 1 end
-			end
-			if notes[i][1] >= hopomark_expert[cur_hopo_marker_expert][1] and notes[i][1] < hopomark_expert[cur_hopo_marker_expert][2] then
-				if diff == 4 then
-					notes[i][7] = true
-				end
-			end
-		end
-	end
-
-	-- Identificar notas HOPO (Hard)
-	if #hopomark_hard ~= 0 then
-		for i = 1, #notes do
-			if notes[i][1] > hopomark_hard[cur_hopo_marker_hard][2] then
-				if cur_hopo_marker_hard < #hopomark_hard then cur_hopo_marker_hard = cur_hopo_marker_hard + 1 end
-			end
-			if notes[i][1] >= hopomark_hard[cur_hopo_marker_hard][1] and notes[i][1] < hopomark_hard[cur_hopo_marker_hard][2] then
-				if diff == 3 then
-					notes[i][7] = true
-				end
-			end
-		end
-	end
-
-	-- Identificar notas HOPO (Medium)
-	if #hopomark_medium ~= 0 then
-		for i = 1, #notes do
-			if notes[i][1] > hopomark_medium[cur_hopo_marker_medium][2] then
-				if cur_hopo_marker_medium < #hopomark_medium then cur_hopo_marker_medium = cur_hopo_marker_medium + 1 end
-			end
-			if notes[i][1] >= hopomark_medium[cur_hopo_marker_medium][1] and notes[i][1] < hopomark_medium[cur_hopo_marker_medium][2] then
-				if diff == 2 then
-					notes[i][7] = true
-				end
-			end
-		end
-	end
-
-	-- Identificar notas HOPO (Easy)
-	if #hopomark_easy ~= 0 then
-		for i = 1, #notes do
-			if notes[i][1] > hopomark_easy[cur_hopo_marker_easy][2] then
-				if cur_hopo_marker_easy < #hopomark_easy then cur_hopo_marker_easy = cur_hopo_marker_easy + 1 end
-			end
-			if notes[i][1] >= hopomark_easy[cur_hopo_marker_easy][1] and notes[i][1] < hopomark_easy[cur_hopo_marker_easy][2] then
-				if diff == 1 then
-					notes[i][7] = true
-				end
-			end
-		end
-	end
+    -- Seleccionar los marcadores para la dificultad actual
+    local force_strum_markers = {}
+    local hopo_markers = {}
+    
+    if diff == 4 then -- Expert
+        force_strum_markers = force_strum_markers_expert
+        hopo_markers = hopomark_expert
+    elseif diff == 3 then -- Hard
+        force_strum_markers = force_strum_markers_hard
+        hopo_markers = hopomark_hard
+    elseif diff == 2 then -- Medium
+        force_strum_markers = force_strum_markers_medium
+        hopo_markers = hopomark_medium
+    elseif diff == 1 then -- Easy
+        force_strum_markers = force_strum_markers_easy
+        hopo_markers = hopomark_easy
+    end
+    
+    -- Para cada nota:
+    -- 1. Verificar si está bajo algún marcador Force Strum
+    -- 2. Si no, verificar si está bajo algún marcador HOPO
+    
+    for i = 1, #notes do
+        local noteTime = notes[i][1]
+        local isForceStrum = false
+        local isHopo = false
+        
+        -- Primero revisar si está bajo Force Strum
+        for _, marker in ipairs(force_strum_markers) do
+            local markerStart = marker[1]
+            local markerEnd = marker[2]
+            
+            if noteTime >= markerStart and noteTime <= markerEnd then
+                isForceStrum = true
+                break
+            end
+        end
+        
+        -- Si no es Force Strum, revisar si es HOPO
+        if not isForceStrum then
+            for _, marker in ipairs(hopo_markers) do
+                local markerStart = marker[1]
+                local markerEnd = marker[2]
+                
+                if noteTime >= markerStart and noteTime <= markerEnd then
+                    isHopo = true
+                    break
+                end
+            end
+        end
+        
+        -- Establecer el estado final de la nota
+        notes[i][7] = isHopo
+    end
+    
+    -- Ordenar las notas para garantizar visualización correcta
+    table.sort(notes, function(a, b) return a[1] < b[1] end)
 end
 
 function updateMidi()
@@ -639,12 +815,26 @@ function updateMidi()
                         break
                     end
                 end
+                
+                -- Resetear los contadores cuando cambia el MIDI
+                notesPlayed = 0
+                totalNotes = 0
+                countedNoteTimes = {}
+                prevCurBeat = 0
+                lastPlayPosition = curBeat
                 midiHash=hash
             end
         end
     else
         midiHash=""
         notes={}
+        
+        -- Resetear los contadores cuando no hay MIDI
+        notesPlayed = 0
+        totalNotes = 0
+        countedNoteTimes = {}
+        prevCurBeat = 0
+        lastPlayPosition = 0
     end
 end
 
@@ -778,7 +968,7 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     processedText = processedText:gsub("PART VOCALS", "")
     
     -- Eliminar el nombre del charter de la pista
-    -- processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
+    processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
     
     -- Eliminar todo el texto entre corchetes, incluyendo los corchetes
     processedText = processedText:gsub("%[.-%]", "")
@@ -1724,7 +1914,7 @@ function drawLyricsVisualizer()
     
     -- Dibujar título del visualizador
     gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, 1
-    gfx.setfont(1, "SDK_JP_Web 85W", 18)
+    gfx.setfont(1, "SDK_JP_Web 85W", 18) -- Genshin Impact font
     local titleText = "Phrase: " .. currentPhrase .. "/" .. #phrases
     local titleW, titleH = gfx.measurestr(titleText)
     
@@ -1735,7 +1925,7 @@ function drawLyricsVisualizer()
     local function renderPhrase(phrase, font_size, y_pos, alpha_mult)
         if #phrase.lyrics == 0 then
             gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, alpha_mult or 1
-            gfx.setfont(1, "SDK_JP_Web 85W", font_size)
+            gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
             local noLyricsText = "[No lyrics found]"
             local textW, _ = gfx.measurestr(noLyricsText)
             gfx.x, gfx.y = (gfx.w - textW) / 2, y_pos
@@ -1759,7 +1949,7 @@ function drawLyricsVisualizer()
         end
         
         -- Ahora calcular el ancho total incluyendo espacios entre palabras
-        gfx.setfont(1, "SDK_JP_Web 85W", font_size)
+        gfx.setfont(1, "SDK_JP_Web 85W", font_size) -- Genshin Impact font
         local spaceWidth = gfx.measurestr(" ")
         local totalWidth = 0
         
@@ -1984,7 +2174,7 @@ function drawCurrentSection()
     
     -- Dibujar texto
     gfx.r, gfx.g, gfx.b, gfx.a = config.textColor.r, config.textColor.g, config.textColor.b, config.textColor.a * opacity
-    gfx.setfont(1, "SDK_JP_Web 85W", config.fontSize)
+    gfx.setfont(1, "SDK_JP_Web 85W", config.fontSize) -- Genshin Impact font
     
     local sectionText = section.name
     local textW, textH = gfx.measurestr(sectionText)
@@ -1996,6 +2186,142 @@ function drawCurrentSection()
     
     -- Restaurar los valores originales de color y alfa
     gfx.r, gfx.g, gfx.b, gfx.a = orig_r, orig_g, orig_b, orig_a
+end
+
+-- Función para contar el total de notas al cargar el MIDI
+function countTotalNotes()
+    if #notes == 0 then
+        return 0
+    end
+    
+    -- Conjunto para almacenar tiempos únicos (para evitar duplicados)
+    local uniqueTimes = {}
+    
+    -- Identificar todos los tiempos únicos donde hay notas
+    for i, note in ipairs(notes) do
+        local time = note[1]  -- El tiempo de la nota
+        uniqueTimes[time] = true
+    end
+    
+    -- Contar el número de entradas únicas
+    local count = 0
+    for _ in pairs(uniqueTimes) do
+        count = count + 1
+    end
+    
+    return count
+end
+
+-- Función para recalcular las notas contadas cuando se retrocede
+function recalculatePlayedNotes(currentPosition)
+    -- Limpiamos todas las notas contadas
+    countedNoteTimes = {}
+    notesPlayed = 0
+    
+    -- Contamos cuántas notas han pasado el recogedor hasta la posición actual
+    for i = 1, #notes do
+        local noteTime = notes[i][1]
+        
+        -- Si la nota está antes de la posición actual y aún no ha sido contada
+        if noteTime <= currentPosition and not countedNoteTimes[noteTime] then
+            notesPlayed = notesPlayed + 1
+            countedNoteTimes[noteTime] = true
+        end
+    end
+end
+
+-- Función para actualizar el contador de notas jugadas
+function updateNotesPlayed()
+    if #notes == 0 then return end
+    
+    -- Obtener la posición actual
+    local currentPosition = curBeat
+    
+    -- Detectar si el usuario ha retrocedido (más de 1 beat)
+    if currentPosition < prevCurBeat - 1 then
+        -- Recalcular notas hasta la posición actual
+        recalculatePlayedNotes(currentPosition)
+    else
+        -- Comprueba si la posición cambió desde la última llamada
+        if currentPosition == prevCurBeat then return end
+        
+        -- Conjunto para almacenar los tiempos de nota que cruzarán el recogedor en este frame
+        local newNoteTimesThisFrame = {}
+        
+        -- Verificar todas las notas
+        for i = 1, #notes do
+            local noteTime = notes[i][1]
+            
+            -- Si la nota está cruzando el recogedor en este frame y no ha sido contada antes
+            if noteTime <= currentPosition and noteTime > prevCurBeat and not countedNoteTimes[noteTime] then
+                newNoteTimesThisFrame[noteTime] = true
+            end
+        end
+        
+        -- Contar cada tiempo único como una sola nota (acorde = 1 nota)
+        for time, _ in pairs(newNoteTimesThisFrame) do
+            notesPlayed = notesPlayed + 1
+            countedNoteTimes[time] = true
+        end
+    end
+    
+    -- Actualizar la posición anterior
+    prevCurBeat = currentPosition
+end
+
+-- Función para dibujar el contador de notas en el centro superior
+function drawNoteCounter()
+
+    -- Actualizar contador de notas jugadas
+    updateNotesPlayed()
+    
+    -- Calcular el total de notas si aún no se ha hecho
+    if totalNotes == 0 and #notes > 0 then
+        totalNotes = countTotalNotes()
+    end
+    
+    -- Posición central deseada en la pantalla
+    local centerX = gfx.w / 2
+    local counterY = 120  -- Posición Y
+    
+    -- Establecer fuente
+    gfx.setfont(1, "SDK_JP_Web 85W", 30) -- Genshin Impact font
+    
+    -- Convertir el número a texto
+    local counterText = tostring(notesPlayed)
+    local textLabel = " NOTES"
+    
+    -- Definir el ancho fijo para cada dígito
+    local digitWidth = 20
+    
+    -- El dígito más a la derecha se centra exactamente en centerX
+    local rightmostDigitX = centerX
+    
+    -- Definir una posición fija para el texto "NOTAS"
+    local fixedLabelX = centerX + digitWidth - 12  -- Distancia fija desde el centro
+    
+    -- Color del texto
+    gfx.r, gfx.g, gfx.b, gfx.a = 0.77, 0.81, 0.96, 1.0
+    
+    -- Dibujar cada dígito de derecha a izquierda
+    for i = 0, #counterText - 1 do
+        local digitIndex = #counterText - i  -- Índice del dígito (de derecha a izquierda)
+        local digit = counterText:sub(digitIndex, digitIndex)
+        
+        -- Calcular la posición X para este dígito (alineado a la derecha)
+        local digitX = rightmostDigitX - (i * digitWidth)
+        
+        -- Centrar el dígito dentro de su espacio asignado
+        local singleDigitW, textH = gfx.measurestr(digit)
+        local adjustedX = digitX - (singleDigitW / 2)
+        
+        gfx.x, gfx.y = adjustedX, counterY
+        gfx.drawstr(digit)
+    end
+    
+    -- Dibujar el texto "NOTAS" en posición fija
+    gfx.x, gfx.y = fixedLabelX, counterY
+    gfx.drawstr(textLabel)
 end
 
 function mapLane(lane)
@@ -2036,7 +2362,13 @@ function drawNotes()
         local heropower = notes[i][6]
         local hopo_notes = notes[i][7]
         
-        local curend = ((notes[curNote][1] + notes[curNote][2]) - curBeat) * trackSpeed
+        local curend
+        if curNote >= 1 and curNote <= #notes then
+            curend = ((notes[curNote][1] + notes[curNote][2]) - curBeat) * trackSpeed
+        else
+            curend = -1.0 
+        end
+
         local rtime = ((ntime - curBeat) * trackSpeed)
         local rend = (((ntime + nlen) - curBeat) * trackSpeed)
         
@@ -2194,7 +2526,7 @@ function updateBeatLines()
 end
 
 function drawBeats()
-    local baseWidth = 255
+    local baseWidth = 243
     local thickness = 5 -- Grosor base de la línea
 
     for i = curBeatLine, #beatLines do
@@ -2206,9 +2538,15 @@ function drawBeats()
 
         local rtime = ((btime - curBeat) * trackSpeed) - 0.08
         local beatScale = imgScale * (1 - (nsm * rtime))
-
-        local sx = ((gfx.w / 2) - ((baseWidth * (1 - (nxm * rtime))) * beatScale))
-        local ex = ((gfx.w / 2) + ((baseWidth * (1 - (nxm * rtime))) * beatScale))
+        
+        -- Cuanto más cerca está la línea (rtime pequeño), más grande será el factor
+        local expansionFactor = 1 + (0.09 * (1 - math.min(1, math.max(0, rtime / 3))))
+        
+        -- Usa el factor de expansión para las líneas más cercanas
+        local adjustedBaseWidth = baseWidth * expansionFactor
+        
+        local sx = ((gfx.w / 2) - ((adjustedBaseWidth * (1 - (nxm * rtime))) * beatScale))
+        local ex = ((gfx.w / 2) + ((adjustedBaseWidth * (1 - (nxm * rtime))) * beatScale))
         local y = gfx.h - (250.1 * beatScale) - ((nyoff * rtime) * beatScale)
 
         y = y + 15  -- Ajuste de posición vertical
@@ -2223,12 +2561,6 @@ function drawBeats()
 
             -- Dibujar un rectángulo para la línea más gruesa
             gfx.rect(sx, y - lineThickness / 2, ex - sx, lineThickness, true)
-
-        -- elseif beatLines[i][2] == "weak" then -- Beat débil
-            -- gfx.r = 0.80
-            -- gfx.g = 0.80
-            -- gfx.b = 0.80
-            -- gfx.rect(sx, y - lineThickness / 2, ex - sx, lineThickness, true)
         end
     end
 end
@@ -2335,14 +2667,19 @@ local function Main()
     end
 	
 	-- Detectar clic del mouse
-    if gfx.mouse_cap & 1 == 1 then
-        if not mouseDown then
-            mouseDown = true
-            handleMouseClick(gfx.mouse_x, gfx.mouse_y)
-        end
-    else
-        mouseDown = false
-    end
+	if gfx.mouse_cap & 1 == 1 then
+		if not mouseDown then
+			mouseDown = true
+			handleMouseClick(gfx.mouse_x, gfx.mouse_y)
+		end
+
+	else
+		if mouseDown then
+			mouseDown = false
+			handleMouseRelease() -- Añadir esta llamada para apagar los efectos de iluminación
+		end
+	end
+
 	
 	if char ~= -1 then
 		reaper.defer(Main)
@@ -2356,17 +2693,28 @@ local function Main()
 		gfx.blit(1,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale)); 
 	else
 		gfx.blit(0,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale));   
-	end 
+	end
+ 
 	if playState==1 then
 		curBeat=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetPlayPosition())-offset
 	end
+
 	curCursorTime=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetCursorPosition())
 	if playState~=1  then
 		curBeat=curCursorTime-offset
 	end
+
 	if curCursorTime~=lastCursorTime then
 		lastCursorTime=curCursorTime
 	end
+    
+    -- Verificar cambios en la posición de reproducción para el contador de notas
+    local currentPlayPosition = curBeat
+    if math.abs(currentPlayPosition - (lastPlayPosition or 0)) > 2 then
+        recalculatePlayedNotes(currentPlayPosition)
+    end
+    lastPlayPosition = currentPlayPosition
+    
 	curNote=1
 	for i=1,#notes do
 		curNote=i
@@ -2374,6 +2722,7 @@ local function Main()
 			break
 		end
 	end
+
 	curBeatLine=1
 	for i=1,#beatLines do
 		curBeatLine=i
@@ -2400,6 +2749,7 @@ local function Main()
 	updateBeatLines()
 	drawBeats()
 	drawNotes()
+	drawNoteCounter()
 	
     -- Dibujar visualizador de letras si está activo
     if showLyrics then
@@ -2421,13 +2771,13 @@ local function Main()
 	gfx.drawstr(string.format(
 		[[%s %s
 		Note: %d/%d
-		Current Beat: %.01f
+		Beat: %d
 		Snap: %s]],
 		diffNames[diff],
 		instrumentTracks[inst][1],
-		curNote,
-		tostring(#notes),
-		curBeat,
+		notesPlayed,  -- Usar notesPlayed en lugar de curNote
+		totalNotes,   -- Usar totalNotes en lugar de #notes
+		math.floor(curBeat),  -- Redondea al entero más cercano
 		toFractionString(quants[movequant])
 	))
 	

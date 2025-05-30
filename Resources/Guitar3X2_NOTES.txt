@@ -13,7 +13,7 @@
 108 Keys
 107 Piano
 106 Sitar
-105 ----
+105 Fix BPM
 104 Taps
 103 Solo
 102 Force Strum

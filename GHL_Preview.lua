@@ -922,13 +922,14 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     local originalText = text  -- Guardar el texto original para referencia
     
     -- Detectar si es una letra sin tono (#)
-    local hasTonelessMarker = processedText:match("#") ~= nil
+    local hasTonelessMarker = processedText:match("#") ~= nil or processedText:match("%^") ~= nil
     
     -- Análisis de conectores en el texto ORIGINAL
     -- Buscar todos los posibles patrones de conector al final
     local connectsWithNext = false
     if originalText:match("%-$") or originalText:match("%+$") or originalText:match("=$") or
-       originalText:match("%-#$") or originalText:match("%+#$") or originalText:match("=#$") then
+       originalText:match("%-#$") or originalText:match("%+#$") or originalText:match("=#$") or
+       originalText:match("%-%^$") or originalText:match("=^$") then
         connectsWithNext = true
     end
     
@@ -961,6 +962,12 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     -- Eliminar todos los marcadores #
     processedText = processedText:gsub("#", "")
     
+    -- Eliminar todos los marcadores ^
+    processedText = processedText:gsub("%^", "")
+    
+    -- Eliminar todos los marcadores §
+    processedText = processedText:gsub("%§", " ")
+    
     -- Eliminar todos los símbolos +
     processedText = processedText:gsub("%+", "")
     
@@ -968,7 +975,7 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     processedText = processedText:gsub("PART VOCALS", "")
     
     -- Eliminar el nombre del charter de la pista
-    processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
+    -- processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
     
     -- Eliminar todo el texto entre corchetes, incluyendo los corchetes
     processedText = processedText:gsub("%[.-%]", "")

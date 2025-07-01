@@ -1,4 +1,4 @@
-version_num="1.1"
+version_num="1.5"
 imgScale=1024/1024
 diffNames={"Easy","Medium","Hard","Expert"}
 movequant=10
@@ -20,7 +20,7 @@ pR={
 -- Rastrea el proyecto actual
 local currentProject = reaper.EnumProjects(-1)
 
--- Agregar estas variables globales al principio del script
+-- Variables globales
 local notesPlayed = 0        -- Contador de notas que han tocado el recogedor
 local totalNotes = 0         -- Total de notas en la canción
 local countedNoteTimes = {}  -- Tabla para almacenar los tiempos de notas que ya han sido contados
@@ -68,8 +68,8 @@ local lyricsConfig = {
     phraseSpacing = 1,      -- Espacio entre frases
     bgOpacity = 0.8,        -- Opacidad del fondo (0.0 - 1.0)
     fontSize = {            -- Tamaños de fuente
-        current = 22,       -- Tamaño para frase actual
-        next = 20           -- Tamaño para próxima frase
+        current = 24,       -- Tamaño para frase actual
+        next = 22           -- Tamaño para próxima frase
     }
 }
 
@@ -83,11 +83,11 @@ local sectionDisplayConfig = {
     width = 150,              -- Ancho del recuadro de sección
     height = 40,              -- Altura del recuadro
     xOffset = 20,             -- Posición X desde el borde izquierdo
-    yOffset = 280,            -- Posición Y desde arriba
-    bgColor = {r = 0.15, g = 0.15, b = 0.25, a = 0.9},  -- Color de fondo
-    textColor = {r = 0.9, g = 0.9, b = 1.0, a = 1.0},   -- Color del texto
+    yOffset = -40,            -- Posición Y; -40 pixeles por encima del borde superior del HUD vocal
     fontSize = 20,            -- Tamaño de la fuente
-    fadeTime = 2.0            -- Tiempo en segundos antes de la siguiente sección para empezar a desvanecer
+    fadeTime = 2.0,           -- Tiempo en segundos antes de la siguiente sección para empezar a desvanecer
+    bgColor = {r = 0.15, g = 0.15, b = 0.25, a = 0.9},  -- Color de fondo
+    textColor = {r = 0.9, g = 0.9, b = 1.0, a = 1.0}    -- Color del texto
 }
 
 -- Detecta cambios en la pista de voces
@@ -929,8 +929,8 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     local connectsWithNext = false
     if originalText:match("%-$") or originalText:match("%+$") or originalText:match("=$") or
        originalText:match("%-#$") or originalText:match("%+#$") or originalText:match("=#$") or
-       originalText:match("%-%^$") or originalText:match("=^$") then
-        connectsWithNext = true
+	   originalText:match("%-%^$") or originalText:match("=^$") then
+		connectsWithNext = true
     end
     
     -- Buscar todos los posibles patrones de conector al principio
@@ -959,6 +959,9 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     -- Convertir = a - (estos guiones serán visibles)
     processedText = processedText:gsub("=", "-")
     
+    -- Convertir =^ a -
+    -- processedText = processedText:gsub("=^", "-")
+    
     -- Eliminar todos los marcadores #
     processedText = processedText:gsub("#", "")
     
@@ -966,7 +969,7 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     processedText = processedText:gsub("%^", "")
     
     -- Eliminar todos los marcadores §
-    processedText = processedText:gsub("%§", " ")
+    processedText = processedText:gsub("%§", "_")
     
     -- Eliminar todos los símbolos +
     processedText = processedText:gsub("%+", "")
@@ -975,7 +978,7 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     processedText = processedText:gsub("PART VOCALS", "")
     
     -- Eliminar el nombre del charter de la pista
-    -- processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
+    processedText = processedText:gsub("GHCripto", "") -- Omite el evento de texto de Copyright (de quien hizo el chart Vocal)
     
     -- Eliminar todo el texto entre corchetes, incluyendo los corchetes
     processedText = processedText:gsub("%[.-%]", "")
@@ -1348,14 +1351,203 @@ function updateLyricsActiveState(currentTime)
     end
 end
 
-function drawLyricsVisualizer()
-    if #phrases == 0 then
+-- Configuración para las líneas de notas (márgenes independientes y rewind correcto)
+local noteLineConfig = {
+    -- Colores
+    activeColor              = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color de notas activas (FRASES COMPLETAS)
+    inactiveColor            = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color de notas inactivas (FRASES COMPLETAS)
+    sungColor                = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color de notas ya cantadas (pasado)
+    hitColor                 = {r = 1.0, g = 1.0, b = 0.3, a = 1.0},  -- Color de notas siendo cantadas (presente)
+    linesSpacing             = 10,   -- Espaciado vertical en pixeles de las líneas de las notas
+    specialNoteRadius        = 10,   -- Tamaño del círculo de las notas sin tono
+
+    -- Rango absoluto de pitch
+    minPitch                 = 36,   -- Nora mínima del "mundo" del HUD
+    maxPitch                 = 86,   -- Nora máxima del "mundo" del HUD
+
+    -- Dimensiones HUD
+    areaHeight               = 180,  -- Altura del hud
+    yOffset                  = 0,    -- Posición vertical del HUD; NO TOCAR!!!!!!
+    hitLineX                 = 150,  -- Posición horizontal de la línea de golpe
+    hitCircleRadius          = 10,   -- tamaño del círculo de la línea de golpe
+
+    -- Dinámica de zoom
+    dynamicPitchRange        = true, -- Activar/Desactivar el HUD dinámico
+    minimumZoomRange         = 18.0, -- Zoom máximo (Rango de notas a mostrar)
+    panZoomSpeed             = 1.98, -- Suavidad de la cámara (Velocidad de la animación)
+    vocalScrollSpeed         = 0.6,  -- Velocidad del desplazamiento de las notas. Mayor valor, más velocidad
+    vocalScrollSpeedBase     = 400,  -- Velocidad base de las notas en píxeles por segundo
+    pausedPanZoomFactor      = 0.05, -- Suavidad al rebobinar o empezar desde una pausa
+    -- crushThresholdPct        = 1.3,
+    crushFactor              = 0.75, -- Sensibilidad del aplastamiento del HUD
+
+    -- Márgenes independientes en píxeles
+    pixelMarginTop           = 20,   -- Padding superior en pixeles del área segura del HUD
+    pixelMarginBottom        = 30,   -- Padding inferior en pixeles del área segura del HUD
+    showPaddingLines         = false, -- Activar/Desactivar líneas del padding de pixeles (solo números impares)
+    paddingLineThickness     = 3,    -- Grosor en píxeles (solo números impares)
+    paddingLineColor         = {r = 1.0, g = 0.3, b = 0.3, a = 1.0}, -- Rojo semitransparente
+
+    -- Tiempo real (segundos)
+    viewFutureSec            = 3.0,  -- Mirar al futuro en segundos para recalcular
+    viewPastSec              = 1.5,  -- Mirar al pasado en segundos para mantener
+    jumpThresholdSec         = 0.5,  -- Detector de saltos para recalcular
+
+    -- Estados internos
+    currentMinDisplayPitch   = 53.0, -- Dónde está la cámara
+    currentMaxDisplayPitch   = 67.0, -- Dónde está la cámara
+    targetMinDisplayPitch    = 53.0, -- A dónde quiere ir cámara
+    targetMaxDisplayPitch    = 67.0, -- A dónde quiere ir cámara
+    _lastTimeSec             = -1000.0, -- (Memoria interna) Último tiempo de reproducción conocido
+    _lastRecalcTimeSec       = -1000.0, -- (Memoria interna) Último tiempo en que se recalculó el zoom/paneo
+
+    -- Líneas del pentagrama
+    ghlGuideLinePitches      = {43,47,50,53,57,64,67,71,74,77}, -- Líneas guia del pentagrama en GHL
+    ghlGuideLineAlpha        = 0.1, -- Opacidad de las líneas guia
+}
+
+-- Función para recalcular el rango objetivo con "Seguimiento" y "Compresión"
+local function recalcTargetPitchRange(currentTimeSec, noteList, deltaTime)
+    local c = noteLineConfig
+    
+    local isRewind = deltaTime and deltaTime < 0
+    local isForwardJump = deltaTime and deltaTime > c.jumpThresholdSec
+    local forceRecalc = isRewind or isForwardJump or (c._lastRecalcTimeSec and currentTimeSec < c._lastRecalcTimeSec)
+
+    -- Ventana de tiempo para analizar las notas futuras
+    local startT = currentTimeSec - c.viewPastSec
+    local endT   = currentTimeSec + c.viewFutureSec
+
+    -- Encontrar el rango de tono/pitch de las notas en la ventana de tiempo
+    local minPf, maxPf = math.huge, -math.huge
+    for _, n in ipairs(noteList) do
+        if n.time >= startT and n.time <= endT then
+            if n.pitch > 0 then -- Ignora notas especiales sin tono para el cálculo de rango
+                minPf = math.min(minPf, n.pitch)
+                maxPf = math.max(maxPf, n.pitch)
+            end
+        end
+    end
+
+    -- Si no hay notas, no hacer nada, se mantiene la vista o se usa un fallback
+    if minPf == math.huge then
+        -- Si no hay notas a futuro, no hay razón para mover la cámara
+        return 
+    end
+
+    -- Limita el rango de notas encontrado a los límites globales del HUD
+    local minP = math.max(minPf, c.minPitch)
+    local maxP = math.min(maxPf, c.maxPitch)
+    
+    -- El span (rango) real de las notas que vienen
+    local actualNotesSpan = maxP - minP
+
+    --  Intento de recreación de estabilización de la cámara de GHL
+    --  Se comprueba si el rango de notas futuras (minP, maxP) ya cabe en la vista
+    --  objetivo actual (targetMinDisplayPitch, targetMaxDisplayPitch)
+    --  Si es así, no recalcula la posición y eso evita que se centren las notas
+    if not forceRecalc and minP >= c.targetMinDisplayPitch and maxP <= c.targetMaxDisplayPitch then
+        -- Si las notas ya están visibles, no es necesario volver a centrar la cámara
         return
     end
+
+    c._lastRecalcTimeSec = currentTimeSec
+
+    local finalSpanToShow
+
+    -- Intento de recreación de la lógica de aplastamiento/compresión de GHL
+    local crushingStartThreshold = c.minimumZoomRange -- Rango mínimo de zoom para comenzar a comprimir
+
+    if actualNotesSpan > crushingStartThreshold then
+        -- COMPRESIÓN: El rango de notas es grande
+        -- No se comprime todo, solo lo que "se pasa" del umbral
+        local excessSpan = actualNotesSpan - crushingStartThreshold
+        local crushedExcess = excessSpan * (c.crushFactor or 1.0)
+        finalSpanToShow = crushingStartThreshold + crushedExcess
+    else
+        -- SEGUIMIENTO: El rango de notas es pequeño
+        -- Se usa el rango mínimo para que la vista sea "estable"
+        finalSpanToShow = c.minimumZoomRange
+    end
     
+    finalSpanToShow = math.min(finalSpanToShow, c.maxPitch - c.minPitch)
+
+    -- Se calcula el punto medio y se establece el nuevo objetivo de la cámara
+    local midP = (minP + maxP) * 0.5
+    c.targetMinDisplayPitch = midP - finalSpanToShow / 2
+    c.targetMaxDisplayPitch = midP + finalSpanToShow / 2
+end
+
+-- Interpola suavemente cada frame
+local function updateDisplayPitchRange(deltaTime)
+    local c = noteLineConfig
+    local alpha
+
+    -- La animación suave basada en 'deltaTime' SÓLO se usa para la reproducción normal y fluida
+    if deltaTime > 0 and deltaTime < c.jumpThresholdSec then
+        alpha = 1 - math.exp(-c.panZoomSpeed * deltaTime)
+    else
+        -- Para PAUSAS (deltaTime=0), REWIND (deltaTime<0) y SALTOS (deltaTime > threshold),
+        -- Se usa una velocidad de animación fija por frame que garantiza una transición suave
+        alpha = c.pausedPanZoomFactor
+    end
+
+    c.currentMinDisplayPitch = c.currentMinDisplayPitch + (c.targetMinDisplayPitch - c.currentMinDisplayPitch) * alpha
+    c.currentMaxDisplayPitch = c.currentMaxDisplayPitch + (c.targetMaxDisplayPitch - c.currentMaxDisplayPitch) * alpha
+end
+
+-- Convierte frases a lista de notas
+local function phrasesToNotes(phrases)
+    local out = {}
+    for _, ph in ipairs(phrases) do
+        for _, ly in ipairs(ph.lyrics) do
+            if ly.pitch and ly.pitch > 0 then
+                local t = reaper.TimeMap2_beatsToTime(0, ly.startTime)
+                table.insert(out, {time = t, pitch = ly.pitch})
+            end
+        end
+    end
+    return out
+end
+
+-- Función principal del HUD vocal
+function drawLyricsVisualizer()
+    if #phrases == 0 then return end
+
+    local currentTimeSec = reaper.TimeMap2_beatsToTime(0, curBeat)
+    local deltaTime      = currentTimeSec - (noteLineConfig._lastTimeSec or currentTimeSec)
+    noteLineConfig._lastTimeSec = currentTimeSec
+
+    recalcTargetPitchRange(currentTimeSec, phrasesToNotes(phrases), deltaTime)
+    
+    updateDisplayPitchRange(deltaTime)
+
     -- Calcular posición y dimensiones para el visualizador de letras con los nuevos valores
     local visualizerHeight = lyricsConfig.height
     local visualizerY = gfx.h - visualizerHeight - 40 + lyricsConfig.bottomMargin
+
+    -- Posición vertical del HUD
+    noteLineConfig.yOffset = visualizerY - 30
+
+    -- Límite virtual, PADDING al HUD
+    local function calculatePaddedY(pitchNormalized)
+        local c = noteLineConfig
+        -- Asegurar que los márgenes existen para evitar errores, si no, usar 0
+        local marginTop = c.pixelMarginTop or 0
+        local marginBottom = c.pixelMarginBottom or 0
+        
+        -- Calcula la altura real disponible para las notas, restando los márgenes
+        local effectiveHeight = c.areaHeight - marginTop - marginBottom
+        
+        -- Si la altura efectiva es negativa (márgenes más grandes que el área), clampear a 0
+        if effectiveHeight < 0 then effectiveHeight = 0 end
+        
+        -- Calcula el offset vertical dentro del área efectiva
+        local pitchOffset = effectiveHeight * pitchNormalized
+        
+        -- Posición final
+        return c.yOffset - (marginBottom + pitchOffset)
+    end
     
     -- Dibujar fondo para el visualizador con opacidad ajustada
     gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, lyricsConfig.bgOpacity
@@ -1365,40 +1557,92 @@ function drawLyricsVisualizer()
     local currentPhraseObj = phrases[currentPhrase]
     local nextPhraseObj = currentPhrase < #phrases and phrases[currentPhrase + 1] or nil
     
-    -- Configuración para las líneas de notas
-    local noteLineConfig = {
-        activeColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color cian para notas activas
-        inactiveColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color cian para notas inactivas
-        sungColor = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color azul para notas ya cantadas
-        hitColor = {r = 1.0, g = 1.0, b = 0.3, a = 1.0},    -- Color amarillo brillante para golpes
-        linesSpacing = 9,  -- Separación entre las líneas superior e inferior
-        specialNoteRadius = 7,  -- Radio para las notas especiales (26 y 29)
-        minPitch = 26,  -- Nota MIDI más baja a mostrar (D1, rango mínimo según mis pruebas en GHL)
-        maxPitch = 86,  -- Nota MIDI más alta a mostrar (D6, rango máximo según mis pruebas en GHL)
-        areaHeight = 230,  -- Altura total del área de líneas de notas
-        yOffset = visualizerY - 30,  -- Posición Y base para las líneas de notas
-        hitLineX = 150,  -- Posición X de la línea de golpeo (recogedor)
-        hitCircleRadius = 8,  -- Radio del círculo que aparece cuando se golpea una nota
-        guideLineCount = 10  -- Número de líneas guía a dibujar (incluyendo la superior e inferior)
-    }
-    
-    -- Solo dibujar el HUD de notas si está activado
-    if showNotesHUD then
-        -- Dibujar fondo para las líneas de notas
-        gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
-        gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
-        
-        -- Dibujar líneas guía horizontales (las líneas grises que dividen la zona de notas)
-        gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, 0.065  -- Color gris semi-transparente
-        
-        -- Calculamos el espaciado vertical entre líneas guía
-        local guideLineSpacing = noteLineConfig.areaHeight / (noteLineConfig.guideLineCount - 1)
-        
-        -- Dibujamos las líneas guía horizontales
-        for i = 0, noteLineConfig.guideLineCount - 1 do
-            local lineY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (i * guideLineSpacing)
-            gfx.line(0, lineY, gfx.w, lineY, 1)  -- Línea delgada
-        end
+	-- Solo dibujar el HUD de notas si está activado
+	if showNotesHUD then
+		-- Dibujar fondo para las líneas de notas
+		gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
+		gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
+
+		-- Dibujar líneas del PADDING
+		if noteLineConfig.showPaddingLines then
+			local c = noteLineConfig
+
+			-- Establecer el color para las líneas de padding
+			gfx.r, gfx.g, gfx.b, gfx.a = c.paddingLineColor.r, c.paddingLineColor.g, c.paddingLineColor.b, c.paddingLineColor.a
+			
+			-- Calcular la posición Y de la línea SUPERIOR
+			local topLineY = (c.yOffset - c.areaHeight) + (c.pixelMarginTop or 0)
+
+			-- Calcular la posición Y de la línea INFERIOR
+			local bottomLineY = c.yOffset - (c.pixelMarginBottom or 0)
+			
+			-- Grosor del PADDING
+			local thickness = c.paddingLineThickness or 1
+			-- Se calcula el offset para el bucle: Si el grosor es 3, el bucle irá de -1 a 1
+			local offset = math.floor((thickness - 1) / 2) 
+
+			for i = -offset, offset do
+				-- Dibujar ambas líneas con el offset vertical 'i'
+				gfx.line(0, topLineY + i, gfx.w, topLineY + i, 1)
+				gfx.line(0, bottomLineY + i, gfx.w, bottomLineY + i, 1)
+			end
+			
+			-- Restaura el alpha, esto evita que afecte a los demás dibujos
+			gfx.a = 1.0
+		end
+		
+		-- Preparar para dibujar las líneas guía
+		gfx.r, gfx.g, gfx.b = 1.0, 1.0, 1.0 -- Color base para las líneas guía
+		
+		-- Usar el alfa de la configuración global
+		gfx.a = noteLineConfig.ghlGuideLineAlpha
+
+		local currentMinP_for_lines = noteLineConfig.currentMinDisplayPitch
+		local currentMaxP_for_lines = noteLineConfig.currentMaxDisplayPitch
+		local pitchRangeSize_for_lines = currentMaxP_for_lines - currentMinP_for_lines
+
+		if pitchRangeSize_for_lines > 0 then -- Solo dibujar si hay un rango válido
+			-- Iterar sobre los pitches definidos para las líneas guía de GHL
+			for i, specificPitch in ipairs(noteLineConfig.ghlGuideLinePitches) do
+				
+				-- La línea solo es visible si su specificPitch está dentro del rango actual del HUD
+				if specificPitch >= currentMinP_for_lines and specificPitch <= currentMaxP_for_lines then
+					-- Normalizar este specificPitch al rango de display actual
+					local pitchNormalized = (specificPitch - currentMinP_for_lines) / pitchRangeSize_for_lines
+					-- Clampea (por si acaso)
+					pitchNormalized = math.max(0, math.min(1, pitchNormalized))
+
+					-- Calcula la posición "Y" usando la nueva función con padding
+					local lineY = calculatePaddedY(pitchNormalized)
+					
+					gfx.line(0, lineY, gfx.w, lineY, 1) -- Dibujar la línea
+				end
+
+
+				if shouldDrawThisLine then
+					-- La línea solo es visible si su pitch está dentro del rango actual del HUD
+					if pitch >= currentMinP_for_lines and pitch <= currentMaxP_for_lines then
+						-- Normalizar este pitch específico al rango de display actual
+						local pitchNormalized = (pitch - currentMinP_for_lines) / pitchRangeSize_for_lines
+						-- Clampear por si acaso, aunque la condición anterior debería cubrirlo
+						pitchNormalized = math.max(0, math.min(1, pitchNormalized))
+
+						-- Calcula la posición Y usando la nueva función con padding
+						local lineY = calculatePaddedY(pitchNormalized)
+
+						-- Ajusta la opacidad de la línea
+						-- if isEmphasizedLine then
+							-- -- gfx.a = 0.085 -- Intenté aplicar opacidad a ciertas líneas, pero se veia horrible
+						-- -- else
+							-- gfx.a = 0.085 -- Más tenues para las otras líneas guía (no sirve)
+						-- end
+						
+						gfx.line(0, lineY, gfx.w, lineY, 1) -- Dibujar la línea
+					end
+				end
+			end
+			gfx.a = 1.0 -- Restaura el alpha, esto evita que afecte a los demás dibujos
+		end
         
         -- Dibujar varias líneas para crear una línea más gruesa (línea de golpeo vertical)
         gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 0.3, 0.3, 1.0  -- Color rojo para la línea de golpeo
@@ -1450,7 +1694,7 @@ function drawLyricsVisualizer()
             for i, lyric in ipairs(phrase.lyrics) do
                 if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
                     if lyric.originalText:match("^%+") then
-                        -- Esta es una nota conectora, buscar su nota anterior
+                        -- SI esta es una nota conectora, buscar su nota anterior
                         local foundPrev = false
                         for j = i-1, 1, -1 do
                             if phrase.lyrics[j].pitch and phrase.lyrics[j].pitch > 0 then
@@ -1483,10 +1727,15 @@ function drawLyricsVisualizer()
             -- Primero, verificar qué cadenas tienen al menos un elemento activo
             for i, lyric in ipairs(phrase.lyrics) do
                 if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-                    local startTime = lyric.startTime
-                    local endTime = lyric.endTime
-                    local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((startTime - curBeat) / 4.0)
-                    local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((endTime - curBeat) / 4.0)
+
+                    -- Lógica de velocidad en pixeles para las notas
+                    local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
+                    local startTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.startTime)
+                    local endTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.endTime)
+                    local timeDiffStart = startTimeSec - currentTimeSec
+                    local timeDiffEnd = endTimeSec - currentTimeSec
+                    local startX = noteLineConfig.hitLineX + (timeDiffStart * speed)
+                    local endX = noteLineConfig.hitLineX + (timeDiffEnd * speed)
                     
                     -- Si esta nota está activa (sin importar si cruza el recogedor)
                     if lyric.isActive then
@@ -1494,7 +1743,7 @@ function drawLyricsVisualizer()
                             -- Marcar toda esta cadena para iluminar
                             chainsToHighlight[chainIds[i]] = true
                         else
-                            -- Es una nota individual, iluminarla si cruza el recogedor
+                            -- Si es una nota individual, iluminarla si cruza el recogedor
                             if startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX then
                                 shouldHighlight[i] = true
                             end
@@ -1533,31 +1782,46 @@ function drawLyricsVisualizer()
             end
             
             for i, lyric in ipairs(phrase.lyrics) do
-                -- Solo dibujar si tiene pitch (tono) y no es toneless (sin tono)
+                -- Solo dibujar si tiene pitch (tono) y no es sin tono
                 if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-                    -- Calcular posición Y basada en el pitch
-                    local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
-                    local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
-                    pitchNormalized = math.max(0, math.min(1, pitchNormalized))  -- Asegurar que esté entre 0 y 1
+                    -- Calcular posición "Y" basada en el pitch
+					local currentMinP, currentMaxP
+					if noteLineConfig.dynamicPitchRange then
+						currentMinP = noteLineConfig.currentMinDisplayPitch
+						currentMaxP = noteLineConfig.currentMaxDisplayPitch
+					else
+						currentMinP = noteLineConfig.minPitch -- valor mínimo fijado en noteLineConfig
+						currentMaxP = noteLineConfig.maxPitch -- valor máximo fijado en noteLineConfig
+					end
+
+					local pitchRangeSize = currentMaxP - currentMinP
+					if pitchRangeSize <= 0 then pitchRangeSize = noteLineConfig.minimumZoomRange end -- Evita la división por cero y asegura un rango mínimo
+
+					local pitchNormalized = (lyric.pitch - currentMinP) / pitchRangeSize
+                    pitchNormalized = math.max(0, math.min(1, pitchNormalized))  -- Se asegura que esté entre 0 y 1
                     
+                    -- Límite virtual, PADDING al HUD
                     -- Centrar verticalmente las notas 26 y 29 en el HUD (estilo GHL)
                     local lineY
                     if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
-                        lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
+                        -- Las notas especiales se centran en el área segura (0.5 = 50% de la altura)
+                        lineY = calculatePaddedY(0.5)
                     else
-                        lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * pitchNormalized
+                        -- Las notas normales usan su pitch normalizado
+                        lineY = calculatePaddedY(pitchNormalized)
                     end
                     
-                    -- Calcular posición X y ancho basados en el tiempo
-                    local timeRange = 4.5  -- Mostrar 4 beats en la pantalla
-                    local timeOffset = curBeat  -- Tiempo actual
-                    
-                    -- Ajustar los tiempos para que la nota golpee la línea cuando sea activa
-                    local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.startTime - timeOffset) / timeRange)
-                    local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - timeOffset) / timeRange)
+                    -- Lógica de velocidad en pixeles para las notas
+                    local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
+                    local startTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.startTime)
+                    local endTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.endTime)
+                    local timeDiffStart = startTimeSec - currentTimeSec
+                    local timeDiffEnd = endTimeSec - currentTimeSec
+                    local startX = noteLineConfig.hitLineX + (timeDiffStart * speed)
+                    local endX = noteLineConfig.hitLineX + (timeDiffEnd * speed)
                     
                     -- Limitar a la ventana visible
-                    local originalStartX = startX  -- Guarda el valor original antes de limitarlo
+                    local originalStartX = startX  -- Esto guarda el valor original antes de limitarlo
                     local originalEndX = endX
                     startX = math.max(150, math.min(gfx.w - 20, startX))
                     endX = math.max(20, math.min(gfx.w - 20, endX))
@@ -1566,14 +1830,14 @@ function drawLyricsVisualizer()
                     local isVisible = (endX > 20 and startX < gfx.w - 20)
                     
                     -- Verificar si la nota está tocando la línea de golpeo
-                    local isHitting = (startX <= noteLineConfig.hitLineX and endX >= noteLineConfig.hitLineX and lyric.isActive)
+                    local isHitting = (originalStartX <= noteLineConfig.hitLineX and originalEndX >= noteLineConfig.hitLineX and lyric.isActive)
                     
                     -- Verificar si esta nota debe iluminarse debido a una nota conectora
                     local shouldIlluminate = isHitting or shouldHighlight[i] or false
                     
                     -- Solo dibujar si la línea es visible
                     if isVisible then
-                        -- Definir el color según el estado de la lírica
+                        -- Define el color según el estado de la nota
                         if shouldIlluminate then
                             -- Nota en una cadena activa o golpeando la línea - usar color de efecto de golpeo
                             gfx.r = noteLineConfig.hitColor.r
@@ -1581,7 +1845,7 @@ function drawLyricsVisualizer()
                             gfx.b = noteLineConfig.hitColor.b
                             gfx.a = noteLineConfig.hitColor.a * opacity
                             
-                            -- Solo registrar el golpe y su posición Y si realmente está tocando el recogedor
+                            -- Solo registrar el golpe y su posición "Y" si realmente está tocando el recogedor
                             if isHitting then
                                 hitDetected = true
                                 hitY = lineY
@@ -1648,6 +1912,44 @@ function drawLyricsVisualizer()
                         end
                     end
                     
+                    -- Dos lógicas aquí, letras en movimiento y velocidad en pixeles para las notas
+                    local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
+                    local startTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.startTime)
+                    local timeDiffStart = startTimeSec - currentTimeSec
+                    local startX_unclamped = noteLineConfig.hitLineX + (timeDiffStart * speed)
+                    
+                    if startX_unclamped < gfx.w then
+                        local fade_zone_width = 100.0 
+                        local text_x_position = startX_unclamped 
+                        local text_y_position = noteLineConfig.yOffset - 18
+
+                        gfx.setfont(1, "SDK_JP_Web 85W", 22) -- Tamaño de la fuente de las letras en movimiento
+                        
+                        local text_alpha = 1.0
+                        if text_x_position < noteLineConfig.hitLineX then
+                            local distance_past_hitline = noteLineConfig.hitLineX - text_x_position
+                            local fade_progress = distance_past_hitline / fade_zone_width
+                            text_alpha = 1.0 - math.max(0, math.min(1.0, fade_progress))
+                        end
+                        
+                        local textToDraw = lyric.text
+
+                        if lyric.originalText:match("^%+") then
+                            -- Caso 1:  Si es conectora (+), no mostrar nada
+                            textToDraw = ""
+                        elseif lyric.endsWithHyphen then
+                            -- Caso 2: Es una sílaba que debe continuar (termina en - o =).
+                            -- Quitar cualquier guion que "lyric.text" ya pueda tener al final
+                            local textWithoutHyphen = textToDraw:gsub("%-$", "")
+                            -- Añadir un solo guion limpio al final
+                            textToDraw = textWithoutHyphen .. "-"
+                        end
+
+                        gfx.r, gfx.g, gfx.b, gfx.a = 1, 1, 1, text_alpha * opacity
+                        gfx.x, gfx.y = text_x_position, text_y_position
+                        gfx.drawstr(textToDraw)
+                    end
+                    
                     -- Guardar información de esta nota para la próxima iteración
                     prevLyric = lyric
                     prevEndX = endX
@@ -1665,56 +1967,61 @@ function drawLyricsVisualizer()
         
         -- Nueva función para dibujar las líneas conectoras grises para todas las frases visibles
         local function drawAllGreyConnectorLines()
-            local timeRange = 4.5
-            local timeOffset = curBeat
-            local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
+            -- Lógica de velocidad en pixeles para las notas
+            local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
             
-            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
-            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
-                local phrase = phrases[phraseIndex]
-                if not phrase then break end
+			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
+			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+				local phrase = phrases[phraseIndex]
+				if not phrase then break end
                 
                 -- Usar opacidad fija para todas las frases
-                local opacity = 0.2
-                
-                -- Dibujar conexiones dentro de la frase actual
-                for i = 1, #phrase.lyrics - 1 do
-                    local currentLyric = phrase.lyrics[i]
-                    local nextLyric = phrase.lyrics[i + 1]
-                    
-                    -- Solo conectar si ambas notas tienen pitch y no son notas de Hero Power (HP)
-                    if currentLyric.pitch and nextLyric.pitch and 
-                       currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
-                       currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
+				local opacity = 0.2
+				
+				for i = 1, #phrase.lyrics - 1 do
+					local currentLyric = phrase.lyrics[i]
+					local nextLyric = phrase.lyrics[i + 1]
+					
+					if currentLyric.pitch and nextLyric.pitch and 
+					   currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
+					   currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
+						
+						-- Límite virtual, PADDING al HUD
+						local currentLineY
+						if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
+							currentLineY = calculatePaddedY(0.5)
+						else
+                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
+                            if pitchRange <= 0 then pitchRange = 1 end
+							local currentPitchNormalized = (currentLyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
+							currentPitchNormalized = math.max(0, math.min(1, currentPitchNormalized))
+							currentLineY = calculatePaddedY(currentPitchNormalized)
+						end
+						
+						local nextLineY
+						if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
+							nextLineY = calculatePaddedY(0.5)
+						else
+                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
+                            if pitchRange <= 0 then pitchRange = 1 end
+							local nextPitchNormalized = (nextLyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
+							nextPitchNormalized = math.max(0, math.min(1, nextPitchNormalized))
+							nextLineY = calculatePaddedY(nextPitchNormalized)
+						end
                         
-                        -- Calcular posiciones Y basadas en los pitches o si es toneless
-                        local currentLineY
-                        if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
-                            currentLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
-                        else
-                            local currentPitchNormalized = (currentLyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
-                            currentPitchNormalized = math.max(0, math.min(1, currentPitchNormalized))
-                            currentLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * currentPitchNormalized
-                        end
-                        
-                        local nextLineY
-                        if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
-                            nextLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
-                        else
-                            local nextPitchNormalized = (nextLyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
-                            nextPitchNormalized = math.max(0, math.min(1, nextPitchNormalized))
-                            nextLineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * nextPitchNormalized
-                        end
-                        
-                        -- Calcular posiciones X basadas en tiempos
-                        local currentEndX = noteLineConfig.hitLineX + (gfx.w - 40) * ((currentLyric.endTime - timeOffset) / timeRange)
-                        local nextStartX = noteLineConfig.hitLineX + (gfx.w - 40) * ((nextLyric.startTime - timeOffset) / timeRange)
+                        -- Lógica de velocidad en pixeles para las notas
+                        local currentEndTimeSec = reaper.TimeMap2_beatsToTime(0, currentLyric.endTime)
+                        local nextStartTimeSec = reaper.TimeMap2_beatsToTime(0, nextLyric.startTime)
+                        local timeDiffEnd = currentEndTimeSec - currentTimeSec
+                        local timeDiffStart = nextStartTimeSec - currentTimeSec
+                        local currentEndX = noteLineConfig.hitLineX + (timeDiffEnd * speed)
+                        local nextStartX = noteLineConfig.hitLineX + (timeDiffStart * speed)
                         
                         -- Determinar si la conexión es visible (al menos una parte debe estar en el HUD)
-                        local isVisible = (currentEndX < gfx.w - 20 and nextStartX > 20)
+                        local isVisible = (currentEndX < gfx.w - 20 and nextStartX > 20 and currentEndX < nextStartX)
                         
                         if isVisible then
-                            -- Calcular posiciones Y para las líneas superior e inferior
+                            -- Calcular posiciones "Y" para las líneas superior e inferior
                             local upperCurrentY = currentLineY - noteLineConfig.linesSpacing/2
                             local lowerCurrentY = currentLineY + noteLineConfig.linesSpacing/2
                             local upperNextY = nextLineY - noteLineConfig.linesSpacing/2
@@ -1724,7 +2031,7 @@ function drawLyricsVisualizer()
                             local originalCurrentEndX = currentEndX
                             local originalNextStartX = nextStartX
                             
-                            -- Limitar las posiciones X para que no se dibujen a la izquierda de la línea de golpeo (x = 150)
+                            -- Limitar las posiciones "X" para que no se dibujen a la izquierda de la línea de golpeo (x = 150)
                             currentEndX = math.max(noteLineConfig.hitLineX, currentEndX)
                             nextStartX = math.max(noteLineConfig.hitLineX, nextStartX)
                             
@@ -1733,7 +2040,7 @@ function drawLyricsVisualizer()
                             nextStartX = math.min(gfx.w - 20, nextStartX)
                             
                             -- Si ajustamos currentEndX, interpolar las posiciones Y correspondientes
-                            if currentEndX ~= originalCurrentEndX then
+                            if currentEndX ~= originalCurrentEndX and originalNextStartX ~= originalCurrentEndX then
                                 local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
                                 local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
                                 upperCurrentY = upperCurrentY + mUpper * (currentEndX - originalCurrentEndX)
@@ -1741,7 +2048,7 @@ function drawLyricsVisualizer()
                             end
                             
                             -- Si ajustamos nextStartX, interpolar las posiciones Y correspondientes
-                            if nextStartX ~= originalNextStartX then
+                            if nextStartX ~= originalNextStartX and originalNextStartX ~= originalCurrentEndX then
                                 local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
                                 local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
                                 upperNextY = upperCurrentY + mUpper * (nextStartX - originalCurrentEndX)
@@ -1765,74 +2072,63 @@ function drawLyricsVisualizer()
         
         -- Función ajustada para dibujar las líneas conectoras "+" con iluminación y movimiento correcto del círculo
         local function drawAllPlusConnectorLines()
-            local timeRange = 4.5
-            local timeOffset = curBeat
-            local pitchRangeSize = noteLineConfig.maxPitch - noteLineConfig.minPitch
-            
-            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
-            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
-                local phrase = phrases[phraseIndex]
-                if not phrase then break end
-                
-                -- Usar opacidad fija para todas las frases
-                local opacity = 1.0
-                
-                -- Variables para rastrear la nota anterior
-                local prevLyric = nil
-                local prevEndX = nil
-                local prevLineY = nil
-                
-                -- Iterar sobre las letras de la frase para encontrar notas con "+"
-                for i, lyric in ipairs(phrase.lyrics) do
-                    -- Solo procesar si tiene pitch y no es Hero Power (HP)
-                    if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-                        -- Calcular posición Y basada en el pitch
-                        local pitchNormalized = (lyric.pitch - noteLineConfig.minPitch) / pitchRangeSize
-                        pitchNormalized = math.max(0, math.min(1, pitchNormalized))
-                        
-                        local lineY
-                        if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
-                            lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight / 2
-                        else
-                            lineY = noteLineConfig.yOffset - noteLineConfig.areaHeight * pitchNormalized
-                        end
-                        
-                        -- Calcular posición X basada en el tiempo
-                        local startX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.startTime - timeOffset) / timeRange)
-                        local endX = noteLineConfig.hitLineX + (gfx.w - 40) * ((lyric.endTime - timeOffset) / timeRange)
-                        
-                        -- Dibujar línea conectora si esta es una sílaba "+"
-                        if lyric.originalText:match("^%+") and prevLyric then
-                            -- Determinar si la línea es visible (al menos parcialmente)
-                            local isVisible = (prevEndX < gfx.w - 20 and startX > noteLineConfig.hitLineX)
+            -- -- Lógica de velocidad en pixeles para las notas
+            local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
+
+			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
+			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+				local phrase = phrases[phraseIndex]
+				if not phrase then break end
+				
+				local opacity = 1.0
+				local prevLyric = nil
+				local prevEndX = nil
+				local prevLineY = nil -- Variable indispensable para el inicio de la línea conectora
+				
+				for i, lyric in ipairs(phrase.lyrics) do
+					if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                        -- Límite virtual, PADDING al HUD
+						local lineY
+						if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
+							lineY = calculatePaddedY(0.5)
+						else
+                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
+                            if pitchRange <= 0 then pitchRange = 1 end
+							local pitchNormalized = (lyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
+							pitchNormalized = math.max(0, math.min(1, pitchNormalized))
+							lineY = calculatePaddedY(pitchNormalized)
+						end
+						
+                        -- Lógica de velocidad en pixeles para las notas
+                        local startTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.startTime)
+                        local timeDiffStart = startTimeSec - currentTimeSec
+						local startX = noteLineConfig.hitLineX + (timeDiffStart * speed)
+
+						if lyric.originalText:match("^%+") and prevLyric then
+                            -- Lógica de velocidad en pixeles para las notas
+                            local prevEndTimeSec = reaper.TimeMap2_beatsToTime(0, prevLyric.endTime)
+                            local prevTimeDiffEnd = prevEndTimeSec - currentTimeSec
+                            local drawStartX = noteLineConfig.hitLineX + (prevTimeDiffEnd * speed)
+
+							local drawStartY = prevLineY 
+							local drawEndY = lineY
+                            local drawEndX = startX
+                            local isVisible = (drawStartX < gfx.w - 20 and drawEndX > noteLineConfig.hitLineX and drawStartX < drawEndX)
                             
                             if isVisible then
                                 -- Ajustar los puntos de inicio y fin para que estén dentro del HUD
-                                local drawStartX = prevEndX
-                                local drawStartY = prevLineY
-                                local drawEndX = startX
-                                local drawEndY = lineY
-                                
-                                -- Guardar los valores originales para cálculos de interpolación y detección de golpeo
                                 local originalStartX = drawStartX
-                                local originalStartY = drawStartY -- Guardar el valor original de Y
+                                local originalStartY = drawStartY
                                 local originalEndX = drawEndX
-                                local originalEndY = drawEndY -- Guardar el valor original de Y
-                                local originalStartTime = prevLyric.endTime
-                                local originalEndTime = lyric.startTime
+                                local originalEndY = drawEndY
                                 
                                 -- Si el inicio está a la izquierda del recogedor, calcular la intersección
                                 if drawStartX < noteLineConfig.hitLineX then
-                                    local m = (drawEndY - drawStartY) / (drawEndX - drawStartX)
+                                    if originalEndX ~= originalStartX then
+                                        local m = (drawEndY - drawStartY) / (originalEndX - originalStartX)
+                                        drawStartY = drawStartY + m * (noteLineConfig.hitLineX - originalStartX)
+                                    end
                                     drawStartX = noteLineConfig.hitLineX
-                                    drawStartY = drawStartY + m * (noteLineConfig.hitLineX - originalStartX)
-                                end
-                                
-                                -- Si el final está más allá del borde derecho, calcular la intersección
-                                if drawEndX > gfx.w - 20 then
-                                    local m = (drawEndY - drawStartY) / (drawEndX - drawStartX)
-                                    drawEndX = gfx.w - 20
-                                    drawEndY = drawStartY + m * (gfx.w - 20 - originalStartX)
                                 end
                                 
                                 -- Calcular las posiciones Y para las líneas superior e inferior
@@ -1846,17 +2142,9 @@ function drawLyricsVisualizer()
                                 
                                 -- Aplicar color según el estado de la línea conectora
                                 if isConnectorActive then
-                                    -- Línea conectora activa: usar color de golpeo
-                                    gfx.r = noteLineConfig.hitColor.r
-                                    gfx.g = noteLineConfig.hitColor.g
-                                    gfx.b = noteLineConfig.hitColor.b
-                                    gfx.a = noteLineConfig.hitColor.a * opacity
+                                    gfx.r = noteLineConfig.hitColor.r; gfx.g = noteLineConfig.hitColor.g; gfx.b = noteLineConfig.hitColor.b; gfx.a = noteLineConfig.hitColor.a * opacity
                                 else
-                                    -- Línea conectora inactiva: usar el mismo color que las líneas de notas inactivas (cian)
-                                    gfx.r = noteLineConfig.inactiveColor.r
-                                    gfx.g = noteLineConfig.inactiveColor.g
-                                    gfx.b = noteLineConfig.inactiveColor.b
-                                    gfx.a = noteLineConfig.inactiveColor.a * opacity
+                                    gfx.r = noteLineConfig.inactiveColor.r; gfx.g = noteLineConfig.inactiveColor.g; gfx.b = noteLineConfig.inactiveColor.b; gfx.a = noteLineConfig.inactiveColor.a * opacity
                                 end
                                 
                                 -- Dibujar las dos líneas diagonales
@@ -1865,23 +2153,21 @@ function drawLyricsVisualizer()
                                 
                                 -- Detectar si la línea conectora está activa y cruza el recogedor
                                 if isConnectorActive and originalStartX < noteLineConfig.hitLineX and originalEndX > noteLineConfig.hitLineX then
-                                    -- Calcular la posición Y donde la línea conectora intersecta el recogedor
-                                    -- usando la ecuación de la recta: y = m*(x - x1) + y1
-                                    -- donde m = (y2 - y1) / (x2 - x1)
-                                    -- Usar los valores originales para evitar errores por ajustes previos
-                                    local m = (originalEndY - originalStartY) / (originalEndX - originalStartX)
-                                    local hitConnectorY = originalStartY + m * (noteLineConfig.hitLineX - originalStartX)
-                                    
-                                    -- Activar el círculo en el recogedor
-                                    hitDetected = true
-                                    hitY = hitConnectorY -- Actualizar la posición del círculo amarillo
+                                    if originalEndX ~= originalStartX then
+                                        local m = (originalEndY - originalStartY) / (originalEndX - originalStartX)
+                                        local hitConnectorY = originalStartY + m * (noteLineConfig.hitLineX - originalStartX)
+                                        hitDetected = true
+                                        hitY = hitConnectorY
+                                    end
                                 end
                             end
                         end
                         
                         -- Guardar información de esta nota para la próxima iteración
                         prevLyric = lyric
-                        prevEndX = endX
+                        local endTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.endTime)
+                        local endTimeDiff = endTimeSec - currentTimeSec
+                        prevEndX = noteLineConfig.hitLineX + (endTimeDiff * speed)
                         prevLineY = lineY
                     end
                 end
@@ -2168,25 +2454,37 @@ function drawCurrentSection()
         end
     end
     
+    -- Ancla el cuadro de secciones al HUD vocal
+    local vocalHudTopY = noteLineConfig.yOffset - noteLineConfig.areaHeight
+    
+    -- Calcula la posición "Y" final del cuadro de sección
+    local finalY = vocalHudTopY + config.yOffset
+    
     -- Guardar los valores originales de color y alfa
     local orig_r, orig_g, orig_b, orig_a = gfx.r, gfx.g, gfx.b, gfx.a
     
     -- Dibujar fondo
     gfx.r, gfx.g, gfx.b, gfx.a = config.bgColor.r, config.bgColor.g, config.bgColor.b, config.bgColor.a * opacity
-    gfx.rect(config.xOffset, config.yOffset, config.width, config.height, 1)
+
+    -- Se usa la nueva 'finalY' en lugar de config.yOffset
+    gfx.rect(config.xOffset, finalY, config.width, config.height, 1)
     
     -- Dibujar borde
     gfx.r, gfx.g, gfx.b, gfx.a = 0.8, 0.8, 0.9, opacity
-    gfx.rect(config.xOffset, config.yOffset, config.width, config.height, 0)
+
+    -- Se usa la nueva 'finalY'
+    gfx.rect(config.xOffset, finalY, config.width, config.height, 0)
     
     -- Dibujar texto
     gfx.r, gfx.g, gfx.b, gfx.a = config.textColor.r, config.textColor.g, config.textColor.b, config.textColor.a * opacity
-    gfx.setfont(1, "SDK_JP_Web 85W", config.fontSize) -- Genshin Impact font
+    gfx.setfont(1, "SDK_JP_Web 85W", config.fontSize)
     
     local sectionText = section.name
     local textW, textH = gfx.measurestr(sectionText)
     local textX = config.xOffset + (config.width - textW) / 2
-    local textY = config.yOffset + (config.height - textH) / 2
+
+    -- Se usa la nueva 'finalY' para el cálculo del texto
+    local textY = finalY + (config.height - textH) / 2
     
     gfx.x, gfx.y = textX, textY
     gfx.drawstr(sectionText)

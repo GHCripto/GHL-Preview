@@ -1,30 +1,7 @@
 # GHL-Preview
 A ReaScript made to preview custom Guitar Hero Live Charts
 
-# Version 1.1
-This new version includes:
-- Buttons to switch between difficulties
-- Button to increase/decrease highway speed
-- Button to increase/decrease offset
-- Lyrics visualizer: Button to toggle the lyrics display on/off
-- Vocal HUD: Button to toggle the vocal HUD (GHL style)
-- Visual indicator when hitting a note in the Vocal HUD
-- Visual indicator of which **Section** you are in (requires the **EVENTS** track)
-- Future notes are now drawn behind, not above, the first, giving a sense of depth
-- Shortcuts to toggle the lyrics display and vocal HUD on/offs
-
-  Note:
-  In the lyrics display, to avoid using spaces or hyphens (which you missed when charting), the following will not be displayed:
-  - The syllable-connecting hyphen **"-"**
-  - The plus sign **"+"** that connects notes
-  - the toneless letter/note marker **"#"**
-  - The equal sign **"="**, which acts as a hyphen **"-"** in some cases, will be displayed as a hyphen in the display.
-  
-  Lyrics marked as pitchless **"#"** will be displayed in **white**.  
-  Lyrics marked as Star Power / Hero Power will be displayed in **yellow**.  
-  Notes **26** and **29**, as well as notes marked as pitchless **"#"**, will be vertically centered in the vocal HUD (as in GHL).
-
-![image](https://github.com/user-attachments/assets/0c4f9c5f-c603-405a-8852-b0d2ffa2d9bd)
+![image](https://github.com/user-attachments/assets/68ef5858-0097-47b0-8273-292b98af507f)
 
 
 
@@ -40,7 +17,7 @@ This new version includes:
 ## Additional notes:
 For a better experience, use the included color map and note names!  
 Guitar events (105 to 114 and 118) are exclusive for Guitar Hero Live (sfx preview included).  
-Requires **Genshin Impact** font (SDK_JP_WEB 85W), extract it yourself.
+Requires **Genshin Impact** font (SDK_JP_WEB 85W).
 
 ## Modified by GHCripto:
 Defaults to Expert Guitar GHL  

@@ -4,7 +4,8 @@
 115 ----
 105 Phrase Marker
 104 ----
-86 Highest Note D6
+87 Highest Note D#6
+86 D6
 85 C#6
 84 C6
 83 B5
@@ -59,8 +60,5 @@
 34 A#1
 33 A1
 32 G#1
-31 G1
-30 F#1
 29 GHL Rap Single
 26 GHL Rap Long
-25 ----

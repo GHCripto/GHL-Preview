@@ -1,9 +1,7 @@
 # GHL-Preview
 A ReaScript made to preview custom Guitar Hero Live Charts
 
-![image](https://github.com/user-attachments/assets/68ef5858-0097-47b0-8273-292b98af507f)
-
-
+<img width="702" height="732" alt="image" src="https://github.com/user-attachments/assets/54a2a888-4abb-49cf-a065-3d17ae18d7ec" />
 
 ## Installation instructions:
 1. Download .zip of repository

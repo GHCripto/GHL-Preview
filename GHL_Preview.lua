@@ -7,7 +7,7 @@ quants={1/32,1/24,1/16,1/12,1/8,1/6,1/4,1/3,1/2,1,2,4}
 midiHash=""
 beatHash=""
 eventsHash=""
-trackSpeed=1.80
+trackSpeed=1.85
 inst=1 -- Guitar 3x2 (GHL)
 diff=4 -- Expert
 pR={
@@ -1358,15 +1358,20 @@ local noteLineConfig = {
     inactiveColor            = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color de notas inactivas (FRASES COMPLETAS)
     sungColor                = {r = 0.2, g = 0.8, b = 1.0, a = 1.0},  -- Color de notas ya cantadas (pasado)
     hitColor                 = {r = 1.0, g = 1.0, b = 0.3, a = 1.0},  -- Color de notas siendo cantadas (presente)
+    hitLineColor             = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},  -- Color blanco de la línea vertical de golpe
+    hitLineThickness         = 3,    -- Grosor en píxeles de la línea
+    hitLineFadePct           = 0.45, -- Porcentaje de la altura total para el degradado (0.25 = 25%)
     linesSpacing             = 10,   -- Espaciado vertical en pixeles de las líneas de las notas
     specialNoteRadius        = 10,   -- Tamaño del círculo de las notas sin tono
+    noteThickness            = 2,    -- Grosor en píxeles de las líneas de las notas y sus conectores
+    noteLineStyle            = "offset_top", -- Estilo de las líneas. Opciones: "default", "offset_top", "offset_bottom"
 
     -- Rango absoluto de pitch
-    minPitch                 = 36,   -- Nora mínima del "mundo" del HUD
-    maxPitch                 = 86,   -- Nora máxima del "mundo" del HUD
+    minPitch                 = 32,   -- Nora mínima del "mundo" del HUD
+    maxPitch                 = 87,   -- Nora máxima del "mundo" del HUD
 
     -- Dimensiones HUD
-    areaHeight               = 180,  -- Altura del hud
+    areaHeight               = 150,  -- Altura del hud
     yOffset                  = 0,    -- Posición vertical del HUD; NO TOCAR!!!!!!
     hitLineX                 = 150,  -- Posición horizontal de la línea de golpe
     hitCircleRadius          = 10,   -- tamaño del círculo de la línea de golpe
@@ -1374,22 +1379,22 @@ local noteLineConfig = {
     -- Dinámica de zoom
     dynamicPitchRange        = true, -- Activar/Desactivar el HUD dinámico
     minimumZoomRange         = 18.0, -- Zoom máximo (Rango de notas a mostrar)
-    panZoomSpeed             = 1.98, -- Suavidad de la cámara (Velocidad de la animación)
-    vocalScrollSpeed         = 0.6,  -- Velocidad del desplazamiento de las notas. Mayor valor, más velocidad
-    vocalScrollSpeedBase     = 400,  -- Velocidad base de las notas en píxeles por segundo
+    panZoomSpeed             = 4.0,  -- Suavidad de la cámara (Velocidad de la animación)
+    vocalScrollSpeed         = 1.1,  -- Velocidad del desplazamiento de las notas. Mayor valor, más velocidad
+    vocalScrollSpeedBase     = 295,  -- Velocidad base de las notas en píxeles por segundo (295: GHL)
     pausedPanZoomFactor      = 0.05, -- Suavidad al rebobinar o empezar desde una pausa
     -- crushThresholdPct        = 1.3,
-    crushFactor              = 0.75, -- Sensibilidad del aplastamiento del HUD
+    -- crushFactor              = 0.75, -- Sensibilidad del aplastamiento del HUD
 
     -- Márgenes independientes en píxeles
-    pixelMarginTop           = 20,   -- Padding superior en pixeles del área segura del HUD
-    pixelMarginBottom        = 30,   -- Padding inferior en pixeles del área segura del HUD
-    showPaddingLines         = false, -- Activar/Desactivar líneas del padding de pixeles (solo números impares)
-    paddingLineThickness     = 3,    -- Grosor en píxeles (solo números impares)
+    pixelMarginTop           = 24.5,   -- Padding superior en pixeles del área segura del HUD
+    pixelMarginBottom        = 36.5,   -- Padding inferior en pixeles del área segura del HUD
+    showPaddingLines         = false,  -- Activar/Desactivar líneas del padding de pixeles (solo números impares)
+    paddingLineThickness     = 3,      -- Grosor en píxeles (solo números impares)
     paddingLineColor         = {r = 1.0, g = 0.3, b = 0.3, a = 1.0}, -- Rojo semitransparente
 
     -- Tiempo real (segundos)
-    viewFutureSec            = 3.0,  -- Mirar al futuro en segundos para recalcular
+    viewFutureSec            = 4.0,  -- Mirar al futuro en segundos para recalcular
     viewPastSec              = 1.5,  -- Mirar al pasado en segundos para mantener
     jumpThresholdSec         = 0.5,  -- Detector de saltos para recalcular
 
@@ -1400,13 +1405,45 @@ local noteLineConfig = {
     targetMaxDisplayPitch    = 67.0, -- A dónde quiere ir cámara
     _lastTimeSec             = -1000.0, -- (Memoria interna) Último tiempo de reproducción conocido
     _lastRecalcTimeSec       = -1000.0, -- (Memoria interna) Último tiempo en que se recalculó el zoom/paneo
+    
+    -- TABLA DE RANGOS (GHL)
+    staticRanges = {
+        -- Ordenamos de la zona más baja a la más alta
+        { min = 32, max = 45 },
+        { min = 39, max = 52 },
+        { min = 46, max = 60 },
+        -- { min = 53, max = 67 }, -- ZONA CENTRAL POR DEFECTO (no funciona)
+        { min = 54, max = 65 }, -- Zona "central" de estabilidad
+        { min = 59, max = 73 },
+        { min = 67, max = 80 },
+        { min = 74, max = 87 },
+    },
 
     -- Líneas del pentagrama
-    ghlGuideLinePitches      = {43,47,50,53,57,64,67,71,74,77}, -- Líneas guia del pentagrama en GHL
-    ghlGuideLineAlpha        = 0.1, -- Opacidad de las líneas guia
+    ghlGuideLines = {
+        stave1 = {43, 47, 50, 53, 57}, -- Pentagrama grave
+        stave2 = {64, 67, 71, 74, 77}, -- Pentagrama agudo
+    },
+    referencePitchIntervalForSpacing = 3, -- El intervalo de pitch que define el espaciado visual estándar (NO TOCAR!!!!)
+    staffLinePaddingTop      = 19,     -- Píxeles de margen superior para las líneas | TEST: 27.4
+    staffLinePaddingBottom   = 24,     -- Píxeles de margen inferior para las líneas | TEST: 34.6
+    staffLineThickness       = 1,      -- Grosor en pixeles (2 en GH, 1 por defecto)
+    ghlGuideLineAlpha        = 0.17,   -- Opacidad de las líneas guia
 }
 
--- Función para recalcular el rango objetivo con "Seguimiento" y "Compresión"
+-- Función auxiliar para encontrar la mejor zona estática para un rango de notas
+local function findBestStaticRange(minP, maxP)
+    local c = noteLineConfig
+    -- Busca la primera zona estática donde quepan las notas
+    for _, zone in ipairs(c.staticRanges) do
+        if minP >= zone.min and maxP <= zone.max then
+            return zone -- Devuelve la tabla completa de la zona
+        end
+    end
+    return nil -- No se encontró ninguna zona adecuada
+end
+
+-- Recalcula el rango objetivo con una nueva lógica híbrida
 local function recalcTargetPitchRange(currentTimeSec, noteList, deltaTime)
     local c = noteLineConfig
     
@@ -1422,60 +1459,49 @@ local function recalcTargetPitchRange(currentTimeSec, noteList, deltaTime)
     local minPf, maxPf = math.huge, -math.huge
     for _, n in ipairs(noteList) do
         if n.time >= startT and n.time <= endT then
-            if n.pitch > 0 then -- Ignora notas especiales sin tono para el cálculo de rango
+            -- Ignora las notas especiales (26, 29, y sin tono "#") para el cálculo del zoom/paneo (como en GHL)
+            if n.pitch > 0 and n.pitch ~= 26 and n.pitch ~= 29 and not n.isToneless then
                 minPf = math.min(minPf, n.pitch)
                 maxPf = math.max(maxPf, n.pitch)
             end
         end
     end
 
-    -- Si no hay notas, no hacer nada, se mantiene la vista o se usa un fallback
-    if minPf == math.huge then
-        -- Si no hay notas a futuro, no hay razón para mover la cámara
-        return 
-    end
+    -- Si no hay notas futuras, no hay por qué mover la cámara.
+    if minPf == math.huge then return end
 
-    -- Limita el rango de notas encontrado a los límites globales del HUD
     local minP = math.max(minPf, c.minPitch)
     local maxP = math.min(maxPf, c.maxPitch)
     
-    -- El span (rango) real de las notas que vienen
-    local actualNotesSpan = maxP - minP
-
-    --  Intento de recreación de estabilización de la cámara de GHL
-    --  Se comprueba si el rango de notas futuras (minP, maxP) ya cabe en la vista
-    --  objetivo actual (targetMinDisplayPitch, targetMaxDisplayPitch)
-    --  Si es así, no recalcula la posición y eso evita que se centren las notas
-    if not forceRecalc and minP >= c.targetMinDisplayPitch and maxP <= c.targetMaxDisplayPitch then
-        -- Si las notas ya están visibles, no es necesario volver a centrar la cámara
+    -- ESTABILIDAD: Si las notas ya caben en la vista actual, no hacer nada
+    if not forceRecalc and minP >= c.currentMinDisplayPitch and maxP <= c.currentMaxDisplayPitch then
         return
     end
-
-    c._lastRecalcTimeSec = currentTimeSec
-
-    local finalSpanToShow
-
-    -- Intento de recreación de la lógica de aplastamiento/compresión de GHL
-    local crushingStartThreshold = c.minimumZoomRange -- Rango mínimo de zoom para comenzar a comprimir
-
-    if actualNotesSpan > crushingStartThreshold then
-        -- COMPRESIÓN: El rango de notas es grande
-        -- No se comprime todo, solo lo que "se pasa" del umbral
-        local excessSpan = actualNotesSpan - crushingStartThreshold
-        local crushedExcess = excessSpan * (c.crushFactor or 1.0)
-        finalSpanToShow = crushingStartThreshold + crushedExcess
-    else
-        -- SEGUIMIENTO: El rango de notas es pequeño
-        -- Se usa el rango mínimo para que la vista sea "estable"
-        finalSpanToShow = c.minimumZoomRange
-    end
     
-    finalSpanToShow = math.min(finalSpanToShow, c.maxPitch - c.minPitch)
+    -- Si se llega hasta aquí, la cámara debe moverse
+    c._lastRecalcTimeSec = currentTimeSec
+    
+    -- LÓGICA HÍBRIDA
 
-    -- Se calcula el punto medio y se establece el nuevo objetivo de la cámara
-    local midP = (minP + maxP) * 0.5
-    c.targetMinDisplayPitch = midP - finalSpanToShow / 2
-    c.targetMaxDisplayPitch = midP + finalSpanToShow / 2
+    -- Intentar encontrar una ZONA ESTÁTICA perfecta
+    local bestZone = findBestStaticRange(minP, maxP)
+    
+    if bestZone then
+        -- Si encuentra una zona de reposo, el objetivo será esa zona
+        c.targetMinDisplayPitch = bestZone.min
+        c.targetMaxDisplayPitch = bestZone.max
+    else
+        -- MODO EMERGENCIA: Si no cabe en ninguna zona, activar el ZOOM DINÁMICO
+        local actualNotesSpan = maxP - minP
+        
+        -- El tamaño de la vista será el del rango de notas, pero NUNCA menor que minimumZoomRange
+        local finalSpanToShow = math.max(actualNotesSpan, c.minimumZoomRange)
+        
+        -- Centrar la cámara en el punto medio de las notas
+        local midP = (minP + maxP) / 2
+        c.targetMinDisplayPitch = midP - finalSpanToShow / 2
+        c.targetMaxDisplayPitch = midP + finalSpanToShow / 2
+    end
 end
 
 -- Interpola suavemente cada frame
@@ -1503,16 +1529,225 @@ local function phrasesToNotes(phrases)
         for _, ly in ipairs(ph.lyrics) do
             if ly.pitch and ly.pitch > 0 then
                 local t = reaper.TimeMap2_beatsToTime(0, ly.startTime)
-                table.insert(out, {time = t, pitch = ly.pitch})
+                -- Propiedad 'isToneless' agregada para que la use la función de cálculo del HUD
+                table.insert(out, {time = t, pitch = ly.pitch, isToneless = ly.isToneless})
             end
         end
     end
     return out
 end
 
+-- Función para dibujar el PENTAGRAMA con líneas equidistantes, estilo GHL (con padding y grosor de 2px)
+function drawEquidistantStaff(stave, config, calculatePaddedY)
+    -- Obtener parámetros de la cámara actual
+    local currentMinP = config.currentMinDisplayPitch
+    local currentMaxP = config.currentMaxDisplayPitch
+    local pitchRangeSize = currentMaxP - currentMinP
+
+    if pitchRangeSize <= 0 or not stave or #stave < 2 then return end
+
+    -- ANCLAR EL PENTAGRAMA COMPLETO
+    local staveMinPitch = stave[1]
+    local staveMaxPitch = stave[#stave]
+
+    -- CALCULAR EL TAMAÑO VIRTUAL DEL PENTAGRAMA EN PANTALLA
+    local minNorm = (staveMinPitch - currentMinP) / pitchRangeSize
+    local maxNorm = (staveMaxPitch - currentMinP) / pitchRangeSize
+    
+    local staveBottomY = calculatePaddedY(minNorm)
+    local staveTopY = calculatePaddedY(maxNorm)
+    
+    local staveTotalHeight = staveBottomY - staveTopY
+
+    -- DIVIDIR EN PARTES IGUALES
+    local numIntervals = #stave - 1
+    if numIntervals == 0 then return end
+
+    -- 1PX MÁS  PARA STAVE 2 >>
+    -- if stave == config.ghlGuideLines.stave2 then
+        -- staveTotalHeight = staveTotalHeight + (numIntervals * 1)
+    -- end
+
+    -- OBTENER LÍMITES Y GROSOR
+    local paddingTop = config.staffLinePaddingTop or 0
+    local paddingBottom = config.staffLinePaddingBottom or 0
+    local clipTopY = (config.yOffset - config.areaHeight) + paddingTop
+    local clipBottomY = config.yOffset - paddingBottom
+    
+    -- Obtener el grosor de la configuración, con 1px como fallback
+    local thickness = config.staffLineThickness or 1
+    -- Calcular un offset para centrar el rectángulo sobre la línea teórica
+    local rectY_offset = math.floor(thickness / 2)
+
+    -- DIBUJAR LAS LÍNEAS CON SU GROSOR Y PADDING
+    for i = 0, numIntervals do
+        -- Calcular la posición Y teórica de cada línea
+        local fraction = i / numIntervals
+        local lineY = staveTopY + (fraction * staveTotalHeight)
+        
+        -- Calcular la posición Y del rectángulo para que quede centrado
+        local rectY = lineY - rectY_offset
+
+        -- Comprobamos la posición central de la línea
+        if lineY >= clipTopY and lineY <= clipBottomY then
+            -- Dibujar un rectángulo en lugar de una línea (permite más grosor)
+            gfx.rect(0, rectY, gfx.w, thickness, 1) -- el último '1' es para que esté relleno
+        end
+    end
+end
+
+-- Función de apoyo para las líneas equidistantes del pentagrama (GHL)
+function getNoteYPosition(pitch, config, calculatePaddedY)
+    local currentMinP = config.currentMinDisplayPitch
+    local currentMaxP = config.currentMaxDisplayPitch
+    local pitchRangeSize = currentMaxP - currentMinP
+
+    if pitchRangeSize <= 0 then return -1000 end -- Fuera de pantalla
+
+    local targetStave = nil
+    
+    -- Determinar a qué pentagrama pertenece la nota (si pertenece a alguno)
+    -- Usar >= en el primero y <= en el último para incluir los límites
+    if pitch >= config.ghlGuideLines.stave1[1] and pitch <= config.ghlGuideLines.stave1[#config.ghlGuideLines.stave1] then
+        targetStave = config.ghlGuideLines.stave1
+    elseif pitch >= config.ghlGuideLines.stave2[1] and pitch <= config.ghlGuideLines.stave2[#config.ghlGuideLines.stave2] then
+        targetStave = config.ghlGuideLines.stave2
+    end
+
+    -- CASO 1: LA NOTA ESTÁ DENTRO DE UN PENTAGRAMA GUÍA
+    if targetStave then
+        local staveMinPitch = targetStave[1]
+        local staveMaxPitch = targetStave[#targetStave]
+        
+        -- Calcular la posición de la nota como una fracción del rango total de PITCH del pentagrama
+        local pitchSpanInStave = staveMaxPitch - staveMinPitch
+        local notePositionInStave = 0 -- Por defecto, al inicio
+        if pitchSpanInStave > 0 then
+            notePositionInStave = (pitch - staveMinPitch) / pitchSpanInStave
+        end
+        
+        -- Encontrar el "índice fraccional" de la nota...
+        -- Ej: pitch 50 en {43,47,50,53,57} está en el índice 3.0
+        -- Ej: pitch 45 estaría entre índice 1 (43) y 2 (47)
+        local fractional_index = 0
+        for i = 1, #targetStave - 1 do
+            if pitch >= targetStave[i] and pitch < targetStave[i+1] then
+                local lower_p = targetStave[i]
+                local upper_p = targetStave[i+1]
+                local interval_span = upper_p - lower_p
+                local factor = 0
+                if interval_span > 0 then
+                    factor = (pitch - lower_p) / interval_span
+                end
+                fractional_index = (i - 1) + factor
+                break
+            end
+        end
+        if pitch >= targetStave[#targetStave] then
+             fractional_index = #targetStave - 1
+        end
+
+        -- Aplicar la misma lógica visual de drawEquidistantStaff
+        local minNorm = (staveMinPitch - currentMinP) / pitchRangeSize
+        local maxNorm = (staveMaxPitch - currentMinP) / pitchRangeSize
+        
+        local staveTopY = calculatePaddedY(maxNorm) -- Y superior (pitch más alto)
+        local staveBottomY = calculatePaddedY(minNorm) -- Y inferior (pitch más bajo)
+        local staveTotalHeight = staveBottomY - staveTopY
+
+        local numIntervals = #targetStave - 1
+        if numIntervals == 0 then return staveBottomY end -- Evitar división por cero
+
+        -- La posición Y final es una interpolación DENTRO del espacio visual del pentagrama
+        local finalY = staveTopY + (fractional_index / numIntervals) * staveTotalHeight
+        return finalY
+    
+    -- CASO 2: LA NOTA ESTÁ FUERA DE CUALQUIER PENTAGRAMA GUÍA (Fallback)
+    else
+        -- Si una nota está fuera de un pentagrama (ej. en medio de los dos),
+        -- se usa el método antiguo de posicionamiento lineal
+        local normalizedPitch = (pitch - currentMinP) / pitchRangeSize
+        return calculatePaddedY(normalizedPitch)
+    end
+end
+
 -- Función principal del HUD vocal
 function drawLyricsVisualizer()
-    if #phrases == 0 then return end
+    if #phrases == 0 then
+        return
+    end
+
+    -- Función auxiliar que calcula la posición Y de un pitch usando una escala puramente lineal
+    -- Esta es la base para anclar los pentagramas
+
+    local function getLinearYPosition(pitch, config, calculatePaddedY)
+        local currentMinP = config.currentMinDisplayPitch
+        local currentMaxP = config.currentMaxDisplayPitch
+        local pitchRangeSize = currentMaxP - currentMinP
+        if pitchRangeSize <= 0 then
+            return -1000
+        end
+
+        local normalizedPitch = (pitch - currentMinP) / pitchRangeSize
+        return calculatePaddedY(normalizedPitch)
+    end
+
+    -- Calcula la coordenada Y precisa para una nota MIDI, alineándola con
+    -- las líneas del pentagrama usando un espaciado visual estándar y consistente (muy similar a GHL)
+
+    local function getNoteYPosition(pitch, config, calculatePaddedY)
+        -- Calcula el espaciado en píxeles estándar basado en el intervalo de referencia
+        local refInterval = config.referencePitchIntervalForSpacing or 3
+        local y1 = getLinearYPosition(config.currentMinDisplayPitch, config, calculatePaddedY)
+        local y2 = getLinearYPosition(config.currentMinDisplayPitch + refInterval, config, calculatePaddedY)
+        local pixel_step_y = math.abs(y1 - y2)
+
+        local targetStave = nil
+        if pitch >= config.ghlGuideLines.stave1[1] and pitch <= config.ghlGuideLines.stave1[#config.ghlGuideLines.stave1] then
+            targetStave = config.ghlGuideLines.stave1
+        elseif pitch >= config.ghlGuideLines.stave2[1] and pitch <= config.ghlGuideLines.stave2[#config.ghlGuideLines.stave2] then
+            targetStave = config.ghlGuideLines.stave2
+        end
+
+        -- CASO 1: LA NOTA ESTÁ DENTRO DE UN PENTAGRAMA GUÍA
+        if targetStave then
+            -- Anclar el pentagrama usando la posición lineal de su primera nota.
+            local anchorY = getLinearYPosition(targetStave[1], config, calculatePaddedY)
+
+            -- Encontrar el índice de la línea guía más cercana por debajo
+            local base_line_index = 1
+            for i = 1, #targetStave do
+                if targetStave[i] <= pitch then
+                    base_line_index = i
+                else
+                    break
+                end
+            end
+            
+            -- Calcular la posición desde el ancla usando el paso estándar de píxeles
+            local baseLineY = anchorY - ((base_line_index - 1) * pixel_step_y)
+
+            -- Interpolar finamente si la nota está entre dos líneas guía
+            if base_line_index < #targetStave then
+                local lower_p = targetStave[base_line_index]
+                local upper_p = targetStave[base_line_index + 1]
+                local pitch_interval = upper_p - lower_p
+                
+                if pitch_interval > 0 then
+                    local factor = (pitch - lower_p) / pitch_interval
+                    local y_offset = factor * pixel_step_y
+                    return baseLineY - y_offset
+                end
+            end
+            
+            return baseLineY
+        
+        -- CASO 2: LA NOTA ESTÁ FUERA DE CUALQUIER PENTAGRAMA GUÍA (Fallback)
+        else
+            -- Para notas que no pertenecen a un pentagrama (como entre 57 y 64), se usa el método lineal
+            return getLinearYPosition(pitch, config, calculatePaddedY)
+        end
+    end
 
     local currentTimeSec = reaper.TimeMap2_beatsToTime(0, curBeat)
     local deltaTime      = currentTimeSec - (noteLineConfig._lastTimeSec or currentTimeSec)
@@ -1540,7 +1775,9 @@ function drawLyricsVisualizer()
         local effectiveHeight = c.areaHeight - marginTop - marginBottom
         
         -- Si la altura efectiva es negativa (márgenes más grandes que el área), clampear a 0
-        if effectiveHeight < 0 then effectiveHeight = 0 end
+        if effectiveHeight < 0 then
+            effectiveHeight = 0
+        end
         
         -- Calcula el offset vertical dentro del área efectiva
         local pitchOffset = effectiveHeight * pitchNormalized
@@ -1590,71 +1827,91 @@ function drawLyricsVisualizer()
 			-- Restaura el alpha, esto evita que afecte a los demás dibujos
 			gfx.a = 1.0
 		end
-		
-		-- Preparar para dibujar las líneas guía
-		gfx.r, gfx.g, gfx.b = 1.0, 1.0, 1.0 -- Color base para las líneas guía
-		
-		-- Usar el alfa de la configuración global
-		gfx.a = noteLineConfig.ghlGuideLineAlpha
 
-		local currentMinP_for_lines = noteLineConfig.currentMinDisplayPitch
-		local currentMaxP_for_lines = noteLineConfig.currentMaxDisplayPitch
-		local pitchRangeSize_for_lines = currentMaxP_for_lines - currentMinP_for_lines
+        -- Función para dibujar un PENTAGRAMA con espaciado estándar y consistente
+        local function drawStandardSpacedStaff(stave, config, calculatePaddedY)
+            if not stave or #stave < 2 then
+                return
+            end
 
-		if pitchRangeSize_for_lines > 0 then -- Solo dibujar si hay un rango válido
-			-- Iterar sobre los pitches definidos para las líneas guía de GHL
-			for i, specificPitch in ipairs(noteLineConfig.ghlGuideLinePitches) do
-				
-				-- La línea solo es visible si su specificPitch está dentro del rango actual del HUD
-				if specificPitch >= currentMinP_for_lines and specificPitch <= currentMaxP_for_lines then
-					-- Normalizar este specificPitch al rango de display actual
-					local pitchNormalized = (specificPitch - currentMinP_for_lines) / pitchRangeSize_for_lines
-					-- Clampea (por si acaso)
-					pitchNormalized = math.max(0, math.min(1, pitchNormalized))
+            -- Calcular el espaciado en píxeles estándar basado en el intervalo de referencia
+            local refInterval = config.referencePitchIntervalForSpacing or 3
+            local y1 = getLinearYPosition(config.currentMinDisplayPitch, config, calculatePaddedY)
+            local y2 = getLinearYPosition(config.currentMinDisplayPitch + refInterval, config, calculatePaddedY)
+            local pixel_step_y = math.abs(y1 - y2)
 
-					-- Calcula la posición "Y" usando la nueva función con padding
-					local lineY = calculatePaddedY(pitchNormalized)
-					
-					gfx.line(0, lineY, gfx.w, lineY, 1) -- Dibujar la línea
-				end
+            -- Anclar el pentagrama usando la posición lineal de su primera nota
+            local anchorY = getLinearYPosition(stave[1], config, calculatePaddedY)
+            
+            local thickness = config.staffLineThickness or 1
+            local rectY_offset = math.floor(thickness / 2)
+            local clipTopY = (config.yOffset - config.areaHeight) + (config.staffLinePaddingTop or 0)
+            local clipBottomY = config.yOffset - (config.staffLinePaddingBottom or 0)
 
-
-				if shouldDrawThisLine then
-					-- La línea solo es visible si su pitch está dentro del rango actual del HUD
-					if pitch >= currentMinP_for_lines and pitch <= currentMaxP_for_lines then
-						-- Normalizar este pitch específico al rango de display actual
-						local pitchNormalized = (pitch - currentMinP_for_lines) / pitchRangeSize_for_lines
-						-- Clampear por si acaso, aunque la condición anterior debería cubrirlo
-						pitchNormalized = math.max(0, math.min(1, pitchNormalized))
-
-						-- Calcula la posición Y usando la nueva función con padding
-						local lineY = calculatePaddedY(pitchNormalized)
-
-						-- Ajusta la opacidad de la línea
-						-- if isEmphasizedLine then
-							-- -- gfx.a = 0.085 -- Intenté aplicar opacidad a ciertas líneas, pero se veia horrible
-						-- -- else
-							-- gfx.a = 0.085 -- Más tenues para las otras líneas guía (no sirve)
-						-- end
-						
-						gfx.line(0, lineY, gfx.w, lineY, 1) -- Dibujar la línea
-					end
-				end
-			end
-			gfx.a = 1.0 -- Restaura el alpha, esto evita que afecte a los demás dibujos
-		end
-        
-        -- Dibujar varias líneas para crear una línea más gruesa (línea de golpeo vertical)
-        gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 0.3, 0.3, 1.0  -- Color rojo para la línea de golpeo
-        for i = -1, 1 do
-            gfx.line(
-                noteLineConfig.hitLineX + i, 
-                noteLineConfig.yOffset - noteLineConfig.areaHeight, 
-                noteLineConfig.hitLineX + i, 
-                noteLineConfig.yOffset, 
-                1
-            )
+            -- Dibujar cada línea a partir del ancla usando el paso de píxeles estándar
+            for i = 1, #stave do
+                -- La primera línea está en anchorY; Las siguientes se espacian uniformemente
+                local lineY = anchorY - ((i - 1) * pixel_step_y)
+                
+                if lineY >= clipTopY and lineY <= clipBottomY then
+                    local rectY = lineY - rectY_offset
+                    gfx.rect(0, rectY, gfx.w, thickness, 1)
+                end
+            end
         end
+
+		-- Preparar para dibujar las líneas guía
+		gfx.r, gfx.g, gfx.b = 1.0, 1.0, 1.0
+		gfx.a = noteLineConfig.ghlGuideLineAlpha
+		
+		-- Dibujar ambos pentagramas de forma independiente con la nueva lógica de espaciado estándar
+		drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave1, noteLineConfig, calculatePaddedY)
+		drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave2, noteLineConfig, calculatePaddedY)
+
+		gfx.a = 1.0 -- Restaurar alpha para los siguientes dibujos
+
+        -- Efecto Fade vertical para la línea de golpe (como en GHL)
+        local c = noteLineConfig
+        local topY = c.yOffset - c.areaHeight
+        local bottomY = c.yOffset
+        
+        -- Asegurarse de que los nuevos parámetros existan para evitar errores
+        local thickness = c.hitLineThickness or 3
+
+        -- El tamaño del fade se calcula basado en el porcentaje de la altura total
+        local fadeHeight = c.areaHeight * (c.hitLineFadePct or 0.25)
+        local color = c.hitLineColor or {r = 1.0, g = 0.3, b = 0.3, a = 1.0}
+
+        -- Calcular la posición X de inicio para centrar la línea
+        local startX = c.hitLineX - math.floor(thickness / 2)
+
+        -- Establecer el color base de la línea
+        gfx.r, gfx.g, gfx.b = color.r, color.g, color.b
+
+        -- Iterar verticalmente, píxel por píxel, para dibujar la línea con degradado
+        for y = topY, bottomY do
+            -- Calcular la distancia al borde más cercano (superior o inferior)
+            local distFromTop = y - topY
+            local distFromBottom = bottomY - y
+            local distToEdge = math.min(distFromTop, distFromBottom)
+            
+            -- Calcular el alfa basado en la distancia al borde
+            local finalAlpha
+            if distToEdge < fadeHeight and fadeHeight > 0 then
+                -- Si estamos en la zona de degradado, calcular el alfa proporcionalmente
+                finalAlpha = distToEdge / fadeHeight
+            else
+                -- Si estamos en la zona central, el alfa es 1 (sólido)
+                finalAlpha = 1.0
+            end
+            
+            -- Aplicar el alfa calculado, multiplicado por el alfa base del color
+            gfx.a = color.a * finalAlpha
+            
+            -- Dibujar un pequeño rectángulo de 1 píxel de alto para este segmento de la línea
+            gfx.rect(startX, y, thickness, 1, 1)
+        end
+        gfx.a = 1.0 -- Restaurar el alfa para los siguientes dibujos
         
         -- Variable para rastrear si hay alguna nota activa cruzando la línea de golpeo
         local hitDetected = false
@@ -1662,7 +1919,9 @@ function drawLyricsVisualizer()
         
         -- Función para dibujar líneas de notas para una frase
         local function drawNoteLines(phrase, opacity)
-            if not phrase then return end
+            if not phrase then
+                return
+            end
             
             -- Variables para rastrear la letra anterior
             local prevLyric = nil
@@ -1784,32 +2043,19 @@ function drawLyricsVisualizer()
             for i, lyric in ipairs(phrase.lyrics) do
                 -- Solo dibujar si tiene pitch (tono) y no es sin tono
                 if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-                    -- Calcular posición "Y" basada en el pitch
-					local currentMinP, currentMaxP
-					if noteLineConfig.dynamicPitchRange then
-						currentMinP = noteLineConfig.currentMinDisplayPitch
-						currentMaxP = noteLineConfig.currentMaxDisplayPitch
-					else
-						currentMinP = noteLineConfig.minPitch -- valor mínimo fijado en noteLineConfig
-						currentMaxP = noteLineConfig.maxPitch -- valor máximo fijado en noteLineConfig
-					end
-
-					local pitchRangeSize = currentMaxP - currentMinP
-					if pitchRangeSize <= 0 then pitchRangeSize = noteLineConfig.minimumZoomRange end -- Evita la división por cero y asegura un rango mínimo
-
-					local pitchNormalized = (lyric.pitch - currentMinP) / pitchRangeSize
-                    pitchNormalized = math.max(0, math.min(1, pitchNormalized))  -- Se asegura que esté entre 0 y 1
-                    
-                    -- Límite virtual, PADDING al HUD
-                    -- Centrar verticalmente las notas 26 y 29 en el HUD (estilo GHL)
                     local lineY
                     if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
-                        -- Las notas especiales se centran en el área segura (0.5 = 50% de la altura)
                         lineY = calculatePaddedY(0.5)
                     else
-                        -- Las notas normales usan su pitch normalizado
-                        lineY = calculatePaddedY(pitchNormalized)
+                        lineY = getNoteYPosition(lyric.pitch, noteLineConfig, calculatePaddedY)
                     end
+                    
+                    -- Define los límites superior e inferior del área de dibujado de notas
+                    local topBoundaryY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (noteLineConfig.pixelMarginTop or 0)
+                    local bottomBoundaryY = noteLineConfig.yOffset - (noteLineConfig.pixelMarginBottom or 0)
+
+                    -- Esto asegura que lineY nunca se calcule fuera de estos límites para el dibujado
+                    lineY = math.max(topBoundaryY, math.min(bottomBoundaryY, lineY))
                     
                     -- Lógica de velocidad en pixeles para las notas
                     local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
@@ -1867,10 +2113,16 @@ function drawLyricsVisualizer()
                             gfx.a = noteLineConfig.inactiveColor.a * opacity
                         end
                         
-                        -- Calcular las posiciones Y para las líneas superior e inferior
+                        -- Calcular las posiciones Y para las líneas superior e inferior, aplicando el estilo de offset (como en GHL, líneas perfectamente alineadas)
                         local upperLineY = lineY - noteLineConfig.linesSpacing/2
                         local lowerLineY = lineY + noteLineConfig.linesSpacing/2
                         
+                        if noteLineConfig.noteLineStyle == "offset_top" then
+                            upperLineY = upperLineY + 1
+                        elseif noteLineConfig.noteLineStyle == "offset_bottom" then
+                            lowerLineY = lowerLineY + 1
+                        end
+
                         -- Solo dibujar la parte de las líneas que están a la derecha del recogedor
                         local visibleStartX = math.max(startX, noteLineConfig.hitLineX)
                         
@@ -1888,25 +2140,35 @@ function drawLyricsVisualizer()
                             elseif lyric.pitch == 26 or lyric.isToneless then
                                 -- Nota 26: Dibujar círculo al inicio y líneas normales
                                 local circleRadius = noteLineConfig.specialNoteRadius
-                                gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
-                                gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
+                                local noteThickness = noteLineConfig.noteThickness or 1
+                                local yOffset = math.floor(noteThickness / 2)
+
+                                -- Se añade +1 al ancho para cerrar el gap de 1px con los conectores
+                                gfx.rect(visibleStartX, upperLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
+                                gfx.rect(visibleStartX, lowerLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
+
                                 if startX >= noteLineConfig.hitLineX then
                                     gfx.circle(startX, lineY, circleRadius, 1, 1)
                                 elseif endX > noteLineConfig.hitLineX then
                                     gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
                                 end
                                 if i == lastNoteIndex and endX < gfx.w - 20 then
-                                    gfx.line(endX, upperLineY, endX, lowerLineY, 1)
+                                    gfx.rect(endX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
                             else
-                                -- Notas normales: Dibujar las dos líneas horizontales
-                                gfx.line(visibleStartX, upperLineY, endX, upperLineY, 1) -- Línea superior
-                                gfx.line(visibleStartX, lowerLineY, endX, lowerLineY, 1) -- Línea inferior
+                                -- Notas normales: Dibujar las dos líneas horizontales con grosor configurable
+                                local noteThickness = noteLineConfig.noteThickness or 1
+                                local yOffset = math.floor(noteThickness / 2)
+
+                                -- Se añade +1 al ancho para cerrar el gap de 1px con los conectores
+                                gfx.rect(visibleStartX, upperLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
+                                gfx.rect(visibleStartX, lowerLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
+
                                 if i == firstNoteIndex and visibleStartX == startX then
-                                    gfx.line(startX, upperLineY, startX, lowerLineY, 1)
+                                    gfx.rect(startX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
                                 if i == lastNoteIndex and endX < gfx.w - 20 then
-                                    gfx.line(endX, upperLineY, endX, lowerLineY, 1)
+                                    gfx.rect(endX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
                             end
                         end
@@ -1973,7 +2235,9 @@ function drawLyricsVisualizer()
 			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
 			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
 				local phrase = phrases[phraseIndex]
-				if not phrase then break end
+				if not phrase then
+                    break
+                end
                 
                 -- Usar opacidad fija para todas las frases
 				local opacity = 0.2
@@ -1986,28 +2250,25 @@ function drawLyricsVisualizer()
 					   currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
 					   currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
 						
-						-- Límite virtual, PADDING al HUD
 						local currentLineY
 						if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
 							currentLineY = calculatePaddedY(0.5)
 						else
-                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
-                            if pitchRange <= 0 then pitchRange = 1 end
-							local currentPitchNormalized = (currentLyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
-							currentPitchNormalized = math.max(0, math.min(1, currentPitchNormalized))
-							currentLineY = calculatePaddedY(currentPitchNormalized)
+							currentLineY = getNoteYPosition(currentLyric.pitch, noteLineConfig, calculatePaddedY)
 						end
 						
 						local nextLineY
 						if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
 							nextLineY = calculatePaddedY(0.5)
 						else
-                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
-                            if pitchRange <= 0 then pitchRange = 1 end
-							local nextPitchNormalized = (nextLyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
-							nextPitchNormalized = math.max(0, math.min(1, nextPitchNormalized))
-							nextLineY = calculatePaddedY(nextPitchNormalized)
+							nextLineY = getNoteYPosition(nextLyric.pitch, noteLineConfig, calculatePaddedY)
 						end
+
+                        -- Define los límites y clampea las posiciones Y de las líneas conectoras
+                        local topBoundaryY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (noteLineConfig.pixelMarginTop or 0)
+                        local bottomBoundaryY = noteLineConfig.yOffset - (noteLineConfig.pixelMarginBottom or 0)
+                        currentLineY = math.max(topBoundaryY, math.min(bottomBoundaryY, currentLineY))
+                        nextLineY = math.max(topBoundaryY, math.min(bottomBoundaryY, nextLineY))
                         
                         -- Lógica de velocidad en pixeles para las notas
                         local currentEndTimeSec = reaper.TimeMap2_beatsToTime(0, currentLyric.endTime)
@@ -2026,7 +2287,15 @@ function drawLyricsVisualizer()
                             local lowerCurrentY = currentLineY + noteLineConfig.linesSpacing/2
                             local upperNextY = nextLineY - noteLineConfig.linesSpacing/2
                             local lowerNextY = nextLineY + noteLineConfig.linesSpacing/2
-                            
+
+                            if noteLineConfig.noteLineStyle == "offset_top" then
+                                upperCurrentY = upperCurrentY + 1
+                                upperNextY = upperNextY + 1
+                            elseif noteLineConfig.noteLineStyle == "offset_bottom" then
+                                lowerCurrentY = lowerCurrentY + 1
+                                lowerNextY = lowerNextY + 1
+                            end
+
                             -- Guardar los valores originales de X para los cálculos de interpolación
                             local originalCurrentEndX = currentEndX
                             local originalNextStartX = nextStartX
@@ -2057,12 +2326,16 @@ function drawLyricsVisualizer()
                             
                             -- Solo dibujar si las posiciones X son diferentes (evitar líneas verticales)
                             if currentEndX ~= nextStartX and nextStartX >= noteLineConfig.hitLineX then
-                                -- Usar opacidad fija para las líneas conectoras grises
+                                local thickness = noteLineConfig.noteThickness or 1
+                                local start_y_offset = -math.floor(thickness / 2)
+                                
                                 gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, opacity
-                                -- Línea superior
-                                gfx.line(currentEndX, upperCurrentY, nextStartX, upperNextY, 1)
-                                -- Línea inferior
-                                gfx.line(currentEndX, lowerCurrentY, nextStartX, lowerNextY, 1)
+                                
+                                for i = 0, thickness - 1 do
+                                    local offset = start_y_offset + i
+                                    gfx.line(currentEndX, upperCurrentY + offset, nextStartX, upperNextY + offset, 1)
+                                    gfx.line(currentEndX, lowerCurrentY + offset, nextStartX, lowerNextY + offset, 1)
+                                end
                             end
                         end
                     end
@@ -2070,15 +2343,17 @@ function drawLyricsVisualizer()
             end
         end
         
-        -- Función ajustada para dibujar las líneas conectoras "+" con iluminación y movimiento correcto del círculo
+        -- Función modificada para dibujar las líneas conectoras "+" con iluminación y movimiento correcto del círculo
         local function drawAllPlusConnectorLines()
-            -- -- Lógica de velocidad en pixeles para las notas
+            -- Lógica de velocidad en pixeles para las notas
             local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
 
 			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
 			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
 				local phrase = phrases[phraseIndex]
-				if not phrase then break end
+				if not phrase then
+                    break
+                end
 				
 				local opacity = 1.0
 				local prevLyric = nil
@@ -2087,16 +2362,11 @@ function drawLyricsVisualizer()
 				
 				for i, lyric in ipairs(phrase.lyrics) do
 					if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-                        -- Límite virtual, PADDING al HUD
 						local lineY
 						if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
 							lineY = calculatePaddedY(0.5)
 						else
-                            local pitchRange = (noteLineConfig.currentMaxDisplayPitch - noteLineConfig.currentMinDisplayPitch)
-                            if pitchRange <= 0 then pitchRange = 1 end
-							local pitchNormalized = (lyric.pitch - noteLineConfig.currentMinDisplayPitch) / pitchRange
-							pitchNormalized = math.max(0, math.min(1, pitchNormalized))
-							lineY = calculatePaddedY(pitchNormalized)
+							lineY = getNoteYPosition(lyric.pitch, noteLineConfig, calculatePaddedY)
 						end
 						
                         -- Lógica de velocidad en pixeles para las notas
@@ -2116,6 +2386,12 @@ function drawLyricsVisualizer()
                             local isVisible = (drawStartX < gfx.w - 20 and drawEndX > noteLineConfig.hitLineX and drawStartX < drawEndX)
                             
                             if isVisible then
+                                -- Define los límites y clampea las posiciones Y de las líneas conectoras
+                                local topBoundaryY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (noteLineConfig.pixelMarginTop or 0)
+                                local bottomBoundaryY = noteLineConfig.yOffset - (noteLineConfig.pixelMarginBottom or 0)
+                                drawStartY = math.max(topBoundaryY, math.min(bottomBoundaryY, drawStartY))
+                                drawEndY = math.max(topBoundaryY, math.min(bottomBoundaryY, drawEndY))
+
                                 -- Ajustar los puntos de inicio y fin para que estén dentro del HUD
                                 local originalStartX = drawStartX
                                 local originalStartY = drawStartY
@@ -2131,12 +2407,20 @@ function drawLyricsVisualizer()
                                     drawStartX = noteLineConfig.hitLineX
                                 end
                                 
-                                -- Calcular las posiciones Y para las líneas superior e inferior
+                                -- Calcular las posiciones Y para las líneas superior e inferior, aplicando el estilo de offset
                                 local startUpperY = drawStartY - noteLineConfig.linesSpacing/2
                                 local startLowerY = drawStartY + noteLineConfig.linesSpacing/2
                                 local endUpperY = drawEndY - noteLineConfig.linesSpacing/2
                                 local endLowerY = drawEndY + noteLineConfig.linesSpacing/2
                                 
+                                if noteLineConfig.noteLineStyle == "offset_top" then
+                                    startUpperY = startUpperY + 1
+                                    endUpperY = endUpperY + 1
+                                elseif noteLineConfig.noteLineStyle == "offset_bottom" then
+                                    startLowerY = startLowerY + 1
+                                    endLowerY = endLowerY + 1
+                                end
+
                                 -- Verificar si la línea conectora está activa (basado en el tiempo de la nota conectora)
                                 local isConnectorActive = lyric.isActive
                                 
@@ -2147,9 +2431,14 @@ function drawLyricsVisualizer()
                                     gfx.r = noteLineConfig.inactiveColor.r; gfx.g = noteLineConfig.inactiveColor.g; gfx.b = noteLineConfig.inactiveColor.b; gfx.a = noteLineConfig.inactiveColor.a * opacity
                                 end
                                 
-                                -- Dibujar las dos líneas diagonales
-                                gfx.line(drawStartX, startUpperY, drawEndX, endUpperY, 1) -- Línea superior
-                                gfx.line(drawStartX, startLowerY, drawEndX, endLowerY, 1) -- Línea inferior
+                                local thickness = noteLineConfig.noteThickness or 1
+                                local start_y_offset = -math.floor(thickness / 2)
+
+                                for i = 0, thickness - 1 do
+                                    local offset = start_y_offset + i
+                                    gfx.line(drawStartX, startUpperY + offset, drawEndX, endUpperY + offset, 1)
+                                    gfx.line(drawStartX, startLowerY + offset, drawEndX, endLowerY + offset, 1)
+                                end
                                 
                                 -- Detectar si la línea conectora está activa y cruza el recogedor
                                 if isConnectorActive and originalStartX < noteLineConfig.hitLineX and originalEndX > noteLineConfig.hitLineX then

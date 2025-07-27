@@ -1,4 +1,4 @@
-version_num="1.5"
+version_num="1.5.2"
 imgScale=1024/1024
 diffNames={"Easy","Medium","Hard","Expert"}
 movequant=10
@@ -11,10 +11,10 @@ trackSpeed=1.85
 inst=1 -- Guitar 3x2 (GHL)
 diff=4 -- Expert
 pR={
-	{{58,64}}, -- Normal notes = Easy
-	{{70,76}}, -- Normal notes = Medium
-	{{82,88}}, -- Normal notes = Hard
-	{{94,100}} -- Normal notes = Expert
+    {{58,64}}, -- Normal notes = Easy
+    {{70,76}}, -- Normal notes = Medium
+    {{82,88}}, -- Normal notes = Hard
+    {{94,100}} -- Normal notes = Expert
 }
 
 -- Rastrea el proyecto actual
@@ -39,7 +39,7 @@ local phrases = {}
 local currentPhrase = 1
 local phraseMarkerNote = 105  -- Nota MIDI para el marcador de frases
 local showLyrics = true       -- Controla si se muestra el visualizador de letras
-local showNotesHUD = true	  -- Controla si se muestra el visualizador de líneas de notas
+local showNotesHUD = true     -- Controla si se muestra el visualizador de líneas de notas
 
 -- Colores para las letras
 local textColorInactive = {r = 0.15, g = 0.9, b = 0.0, a = 1.0}  -- Verde
@@ -63,7 +63,7 @@ local textColorHeroPowerSung = {r = 0.9764706, g = 0.8999952, b = 0.5372549, a =
 -- Variables configurables para ajustar la posición y tamaño del visualizador de letras
 local lyricsConfig = {
     height = 110,           -- Altura total del visualizador
-    bottomMargin = 30,     	-- Margen inferior (negativo = se superpone con el borde)
+    bottomMargin = 30,      -- Margen inferior (negativo = se superpone con el borde)
     phraseHeight = 35,      -- Altura de cada frase (reducida ligeramente)
     phraseSpacing = 1,      -- Espacio entre frases
     bgOpacity = 0.8,        -- Opacidad del fondo (0.0 - 1.0)
@@ -124,17 +124,17 @@ lastCursorTime=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetCursor
 showHelp=false
 
 local function rgb2num(r, g, b)
-	g = g * 256
-	b = b * 256 * 256
-	return r + g + b
+    g = g * 256
+    b = b * 256 * 256
+    return r + g + b
 end
 
 function toFractionString(number)
-	if number<1 then
-		return string.format('1/%d', math.floor(1/number))
-	else
-		return string.format('%d',number)
-	end
+    if number<1 then
+        return string.format('1/%d', math.floor(1/number))
+    else
+        return string.format('%d',number)
+    end
 end
 
 -- Esto soluciona el "-0.00" en el botón del Offset
@@ -148,24 +148,24 @@ function formatNumber(number, precision)
 end
 
 function getNoteIndex(time, lane)
-	for i, note in ipairs(notes) do
-		if note[1] == time and note[3] == lane then
-			return i
-		end
-	end
-	return -1
+    for i, note in ipairs(notes) do
+        if note[1] == time and note[3] == lane then
+            return i
+        end
+    end
+    return -1
 end
 
 function findTrack(trackName)
-	local numTracks = reaper.CountTracks(0)
-	for i = 0, numTracks - 1 do
-		local track = reaper.GetTrack(0, i)
-		local _, currentTrackName = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
-		if currentTrackName == trackName then
-			return track
-		end
-	end
-	return nil
+    local numTracks = reaper.CountTracks(0)
+    for i = 0, numTracks - 1 do
+        local track = reaper.GetTrack(0, i)
+        local _, currentTrackName = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
+        if currentTrackName == trackName then
+            return track
+        end
+    end
+    return nil
 end
 
 -- Función para dibujar los botones de dificultad
@@ -609,7 +609,7 @@ function handleMouseRelease()
 end
 
 gfx.clear = rgb2num(35, 38, 52) -- Background color
-gfx.init("GHL Preview", 700, 700, 0, 1211, 43) -- Wight, Geight, X Pos, Y Pos.
+gfx.init("GHL Preview", 700, 700, 0, 1211, 43) -- Alto, Ancho, Eje X, Eje Y
 
 local script_folder = string.gsub(debug.getinfo(1).source:match("@?(.*[\\|/])"),"\\","/")
 highway = gfx.loadimg(1,script_folder.."assets/highway.png")
@@ -627,7 +627,7 @@ hero_icon = gfx.loadimg(14, script_folder.."assets/hero_icon.png")
 open_note_herocollect = gfx.loadimg(15, script_folder.."assets/open_note_herocollect.png")
 
 instrumentTracks={
-	{"Guitar 3x2",findTrack("PART GUITAR GHL")}
+    {"Guitar 3x2",findTrack("PART GUITAR GHL")}
 }
 
 function parseNotes(take)
@@ -853,10 +853,10 @@ function resetState()
     phrases = {}
     beatLines = {}
     
-	eventsTrack = nil
-	sections = {}
-	currentSection = 1
-	eventsHash = ""
+    eventsTrack = nil
+    sections = {}
+    currentSection = 1
+    eventsHash = ""
 
     -- Reiniciar estados
     curNote = 1
@@ -929,8 +929,8 @@ function createLyric(text, startTime, endTime, pitch, hasHeroPower)
     local connectsWithNext = false
     if originalText:match("%-$") or originalText:match("%+$") or originalText:match("=$") or
        originalText:match("%-#$") or originalText:match("%+#$") or originalText:match("=#$") or
-	   originalText:match("%-%^$") or originalText:match("=^$") then
-		connectsWithNext = true
+       originalText:match("%-%^$") or originalText:match("=^$") then
+        connectsWithNext = true
     end
     
     -- Buscar todos los posibles patrones de conector al principio
@@ -1159,36 +1159,36 @@ function parseVocals()
             -- NOTA: En Reaper, los eventos de texto de tipo "Letras"
             -- no necesariamente están asociados con notas. Se leerán directamente.
             local textEvents = {}
-			for j = 0, textSysexCount-1 do
-				local retval, selected, muted, ppqpos, type, msg = reaper.MIDI_GetTextSysexEvt(take, j)
-				
-				if retval and msg and msg ~= "" then
-					local time = reaper.MIDI_GetProjQNFromPPQPos(take, ppqpos)
-					local foundPitch = nil
-					local noteEndTime = time + 0.25  -- Duración predeterminada
-					
-					-- Buscar una nota MIDI que coincida con este evento de texto
-					for n = 0, noteCount-1 do
-						local _, _, _, noteStartppq, noteEndppq, _, pitch, _ = reaper.MIDI_GetNote(take, n)
-						local noteStartTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteStartppq)
-						local nEndTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteEndppq)
-						
-						-- Si la nota no es un marcador de frase y coincide con el tiempo del evento
-						if pitch ~= phraseMarkerNote and math.abs(noteStartTime - time) < 0.01 then
-							foundPitch = pitch
-							noteEndTime = nEndTime
-							break
-						end
-					end
-					
-					table.insert(textEvents, {
-						text = msg,
-						time = time,
-						endTime = noteEndTime,
-						pitch = foundPitch
-					})
-				end
-			end
+            for j = 0, textSysexCount-1 do
+                local retval, selected, muted, ppqpos, type, msg = reaper.MIDI_GetTextSysexEvt(take, j)
+                
+                if retval and msg and msg ~= "" then
+                    local time = reaper.MIDI_GetProjQNFromPPQPos(take, ppqpos)
+                    local foundPitch = nil
+                    local noteEndTime = time + 0.25  -- Duración predeterminada
+                    
+                    -- Buscar una nota MIDI que coincida con este evento de texto
+                    for n = 0, noteCount-1 do
+                        local _, _, _, noteStartppq, noteEndppq, _, pitch, _ = reaper.MIDI_GetNote(take, n)
+                        local noteStartTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteStartppq)
+                        local nEndTime = reaper.MIDI_GetProjQNFromPPQPos(take, noteEndppq)
+                        
+                        -- Si la nota no es un marcador de frase y coincide con el tiempo del evento
+                        if pitch ~= phraseMarkerNote and math.abs(noteStartTime - time) < 0.01 then
+                            foundPitch = pitch
+                            noteEndTime = nEndTime
+                            break
+                        end
+                    end
+                    
+                    table.insert(textEvents, {
+                        text = msg,
+                        time = time,
+                        endTime = noteEndTime,
+                        pitch = foundPitch
+                    })
+                end
+            end
             
             -- Ordenar eventos de texto por tiempo
             table.sort(textEvents, function(a, b) return a.time < b.time end)
@@ -1209,11 +1209,11 @@ function parseVocals()
             end
             
             -- Asignar eventos de texto a frases
-			for _, event in ipairs(textEvents) do
-				local assignedToPhrase = false
-				
-				for k, phrase in ipairs(phrases) do
-					if event.time >= phrase.startTime and event.time <= phrase.endTime then
+            for _, event in ipairs(textEvents) do
+                local assignedToPhrase = false
+                
+                for k, phrase in ipairs(phrases) do
+                    if event.time >= phrase.startTime and event.time <= phrase.endTime then
                         -- MODIFICADO: Comprobar si este evento coincide con alguna nota Hero Power
                         local hasHeroPower = false
                         for _, hpNote in ipairs(heroPowerNotes) do
@@ -1226,17 +1226,17 @@ function parseVocals()
                             end
                         end
                         
-						table.insert(phrase.lyrics, createLyric(
-							event.text,
-							event.time,
-							event.endTime,
-							event.pitch,
-							hasHeroPower  -- Pasar el flag de Hero Power
-						))
-						assignedToPhrase = true
-						break
-					end
-				end
+                        table.insert(phrase.lyrics, createLyric(
+                            event.text,
+                            event.time,
+                            event.endTime,
+                            event.pitch,
+                            hasHeroPower  -- Pasar el flag de Hero Power
+                        ))
+                        assignedToPhrase = true
+                        break
+                    end
+                end
                 
                 -- Si no se asignó a ninguna frase, crear una nueva frase
                 if not assignedToPhrase and #phrases > 0 then
@@ -1268,15 +1268,15 @@ function parseVocals()
                         end
                     end
                     
-					table.insert(phrases[closestPhrase].lyrics, createLyric(
-						event.text,
-						event.time,
-						event.endTime,
-						event.pitch,
-						hasHeroPower  -- Pasar el flag de Hero Power
-					))
-				end
-			end
+                    table.insert(phrases[closestPhrase].lyrics, createLyric(
+                        event.text,
+                        event.time,
+                        event.endTime,
+                        event.pitch,
+                        hasHeroPower  -- Pasar el flag de Hero Power
+                    ))
+                end
+            end
         end
     end
     
@@ -1342,11 +1342,11 @@ function updateLyricsActiveState(currentTime)
             
             -- Las letras que son + no deben mostrar su propio estado activo
             -- ya que ese tiempo lo absorbe la letra anterior
-			if lyric.originalText:find("^%+") then
-				if i > 1 and phrase.lyrics[i-1].isActive then
-					lyric.isActive = true  -- heredar estado activo si la anterior está activa
-				end
-			end
+            if lyric.originalText:find("^%+") then
+                if i > 1 and phrase.lyrics[i-1].isActive then
+                    lyric.isActive = true  -- heredar estado activo si la anterior está activa
+                end
+            end
         end
     end
 end
@@ -1361,10 +1361,11 @@ local noteLineConfig = {
     hitLineColor             = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},  -- Color blanco de la línea vertical de golpe
     hitLineThickness         = 3,    -- Grosor en píxeles de la línea
     hitLineFadePct           = 0.45, -- Porcentaje de la altura total para el degradado (0.25 = 25%)
-    linesSpacing             = 10,   -- Espaciado vertical en pixeles de las líneas de las notas
+    linesSpacing             = 8,   -- Espaciado vertical en pixeles de las líneas de las notas
     specialNoteRadius        = 10,   -- Tamaño del círculo de las notas sin tono
+    specialNoteYOffset       = 0,    -- Desplazamiento vertical de notas sin tono. 0 = Default, Positivo = arriba, Negativo = abajo
     noteThickness            = 2,    -- Grosor en píxeles de las líneas de las notas y sus conectores
-    noteLineStyle            = "offset_top", -- Estilo de las líneas. Opciones: "default", "offset_top", "offset_bottom"
+    noteLineStyle            = "default", -- Estilo de las líneas. Opciones: "default", "offset_top", "offset_bottom"
 
     -- Rango absoluto de pitch
     minPitch                 = 32,   -- Nora mínima del "mundo" del HUD
@@ -1375,16 +1376,15 @@ local noteLineConfig = {
     yOffset                  = 0,    -- Posición vertical del HUD; NO TOCAR!!!!!!
     hitLineX                 = 150,  -- Posición horizontal de la línea de golpe
     hitCircleRadius          = 10,   -- tamaño del círculo de la línea de golpe
+    hitCircleYOffset         = 1,    -- Desplazamiento vertical del círculo de golpe. 0 = Default, Positivo = arriba, Negativo = abajo
 
     -- Dinámica de zoom
     dynamicPitchRange        = true, -- Activar/Desactivar el HUD dinámico
     minimumZoomRange         = 18.0, -- Zoom máximo (Rango de notas a mostrar)
-    panZoomSpeed             = 4.0,  -- Suavidad de la cámara (Velocidad de la animación)
+    panZoomSpeed             = 9.0,  -- Suavidad de la cámara (Velocidad de la animación)
+    panZoomBaseSpeed         = 1.5,  -- Velocidad base para el panZoomSpeed. Mayor valor, más velocidad ( 1.5 = GHL)
     vocalScrollSpeed         = 1.1,  -- Velocidad del desplazamiento de las notas. Mayor valor, más velocidad
     vocalScrollSpeedBase     = 295,  -- Velocidad base de las notas en píxeles por segundo (295: GHL)
-    pausedPanZoomFactor      = 0.05, -- Suavidad al rebobinar o empezar desde una pausa
-    -- crushThresholdPct        = 1.3,
-    -- crushFactor              = 0.75, -- Sensibilidad del aplastamiento del HUD
 
     -- Márgenes independientes en píxeles
     pixelMarginTop           = 24.5,   -- Padding superior en pixeles del área segura del HUD
@@ -1412,8 +1412,8 @@ local noteLineConfig = {
         { min = 32, max = 45 },
         { min = 39, max = 52 },
         { min = 46, max = 60 },
-        -- { min = 53, max = 67 }, -- ZONA CENTRAL POR DEFECTO (no funciona)
-        { min = 54, max = 65 }, -- Zona "central" de estabilidad
+        { min = 53, max = 67 }, -- Cámara por defecto (GHL)
+        { min = 54, max = 65 },
         { min = 59, max = 73 },
         { min = 67, max = 80 },
         { min = 74, max = 87 },
@@ -1427,8 +1427,9 @@ local noteLineConfig = {
     referencePitchIntervalForSpacing = 3, -- El intervalo de pitch que define el espaciado visual estándar (NO TOCAR!!!!)
     staffLinePaddingTop      = 19,     -- Píxeles de margen superior para las líneas | TEST: 27.4
     staffLinePaddingBottom   = 24,     -- Píxeles de margen inferior para las líneas | TEST: 34.6
-    staffLineThickness       = 1,      -- Grosor en pixeles (2 en GH, 1 por defecto)
-    ghlGuideLineAlpha        = 0.17,   -- Opacidad de las líneas guia
+    staffLineThickness       = 2,      -- Grosor en pixeles (2 en GH, 1 por defecto)
+    staffLineYOffset         = 0,      -- Desplazamiento vertical. 0 = Default, Positivo = arriba, Negativo = abajo
+    ghlGuideLineAlpha        = 0.1,    -- Opacidad de las líneas guia
 }
 
 -- Función auxiliar para encontrar la mejor zona estática para un rango de notas
@@ -1504,22 +1505,48 @@ local function recalcTargetPitchRange(currentTimeSec, noteList, deltaTime)
     end
 end
 
--- Interpola suavemente cada frame
+-- Interpola suavemente la cámara, pero con una parada controlada
 local function updateDisplayPitchRange(deltaTime)
     local c = noteLineConfig
-    local alpha
+    
+    -- Definir un umbral de proximidad. No deja que la cámara llegue al 100% del objetivo
+    local minimumDistance = 0.001
 
-    -- La animación suave basada en 'deltaTime' SÓLO se usa para la reproducción normal y fluida
-    if deltaTime > 0 and deltaTime < c.jumpThresholdSec then
-        alpha = 1 - math.exp(-c.panZoomSpeed * deltaTime)
+    -- Calcular la distancia que falta para llegar al target
+    local minDiff = c.targetMinDisplayPitch - c.currentMinDisplayPitch
+    local maxDiff = c.targetMaxDisplayPitch - c.currentMaxDisplayPitch
+
+    -- Calcular la velocidad final de la cámara
+    local speed = c.panZoomBaseSpeed * c.panZoomSpeed
+    
+    -- Si el tiempo se detiene o va hacia atrás, asume un framerate de 60fps para que no se pare
+    if deltaTime <= 0 then deltaTime = 1/60 end
+    
+    -- Máximo movimiento permitido para este frame
+    local maxMovement = speed * deltaTime
+
+    -- --- Lógica principal del movimiento ---
+    
+    -- Mover el Min Pitch:
+    -- Esto comprueba si el movimiento de este frame pasaría del umbral de parada
+    if math.abs(minDiff) <= maxMovement + minimumDistance then
+        -- Si es así, no salta al final. Posiciona la cámara justo a `minimumDistance` del objetivo
+        local direction = minDiff > 0 and 1 or -1
+        c.currentMinDisplayPitch = c.targetMinDisplayPitch - (minimumDistance * direction)
     else
-        -- Para PAUSAS (deltaTime=0), REWIND (deltaTime<0) y SALTOS (deltaTime > threshold),
-        -- Se usa una velocidad de animación fija por frame que garantiza una transición suave
-        alpha = c.pausedPanZoomFactor
+        -- Si no, realiza el movimiento lineal normal
+        local direction = minDiff > 0 and 1 or -1
+        c.currentMinDisplayPitch = c.currentMinDisplayPitch + (direction * maxMovement)
     end
-
-    c.currentMinDisplayPitch = c.currentMinDisplayPitch + (c.targetMinDisplayPitch - c.currentMinDisplayPitch) * alpha
-    c.currentMaxDisplayPitch = c.currentMaxDisplayPitch + (c.targetMaxDisplayPitch - c.currentMaxDisplayPitch) * alpha
+    
+    -- Mover el Max Pitch:
+    if math.abs(maxDiff) <= maxMovement + minimumDistance then
+        local direction = maxDiff > 0 and 1 or -1
+        c.currentMaxDisplayPitch = c.targetMaxDisplayPitch - (minimumDistance * direction)
+    else
+        local direction = maxDiff > 0 and 1 or -1
+        c.currentMaxDisplayPitch = c.currentMaxDisplayPitch + (direction * maxMovement)
+    end
 end
 
 -- Convierte frases a lista de notas
@@ -1536,141 +1563,6 @@ local function phrasesToNotes(phrases)
     end
     return out
 end
-
--- Función para dibujar el PENTAGRAMA con líneas equidistantes, estilo GHL (con padding y grosor de 2px)
-function drawEquidistantStaff(stave, config, calculatePaddedY)
-    -- Obtener parámetros de la cámara actual
-    local currentMinP = config.currentMinDisplayPitch
-    local currentMaxP = config.currentMaxDisplayPitch
-    local pitchRangeSize = currentMaxP - currentMinP
-
-    if pitchRangeSize <= 0 or not stave or #stave < 2 then return end
-
-    -- ANCLAR EL PENTAGRAMA COMPLETO
-    local staveMinPitch = stave[1]
-    local staveMaxPitch = stave[#stave]
-
-    -- CALCULAR EL TAMAÑO VIRTUAL DEL PENTAGRAMA EN PANTALLA
-    local minNorm = (staveMinPitch - currentMinP) / pitchRangeSize
-    local maxNorm = (staveMaxPitch - currentMinP) / pitchRangeSize
-    
-    local staveBottomY = calculatePaddedY(minNorm)
-    local staveTopY = calculatePaddedY(maxNorm)
-    
-    local staveTotalHeight = staveBottomY - staveTopY
-
-    -- DIVIDIR EN PARTES IGUALES
-    local numIntervals = #stave - 1
-    if numIntervals == 0 then return end
-
-    -- 1PX MÁS  PARA STAVE 2 >>
-    -- if stave == config.ghlGuideLines.stave2 then
-        -- staveTotalHeight = staveTotalHeight + (numIntervals * 1)
-    -- end
-
-    -- OBTENER LÍMITES Y GROSOR
-    local paddingTop = config.staffLinePaddingTop or 0
-    local paddingBottom = config.staffLinePaddingBottom or 0
-    local clipTopY = (config.yOffset - config.areaHeight) + paddingTop
-    local clipBottomY = config.yOffset - paddingBottom
-    
-    -- Obtener el grosor de la configuración, con 1px como fallback
-    local thickness = config.staffLineThickness or 1
-    -- Calcular un offset para centrar el rectángulo sobre la línea teórica
-    local rectY_offset = math.floor(thickness / 2)
-
-    -- DIBUJAR LAS LÍNEAS CON SU GROSOR Y PADDING
-    for i = 0, numIntervals do
-        -- Calcular la posición Y teórica de cada línea
-        local fraction = i / numIntervals
-        local lineY = staveTopY + (fraction * staveTotalHeight)
-        
-        -- Calcular la posición Y del rectángulo para que quede centrado
-        local rectY = lineY - rectY_offset
-
-        -- Comprobamos la posición central de la línea
-        if lineY >= clipTopY and lineY <= clipBottomY then
-            -- Dibujar un rectángulo en lugar de una línea (permite más grosor)
-            gfx.rect(0, rectY, gfx.w, thickness, 1) -- el último '1' es para que esté relleno
-        end
-    end
-end
-
--- Función de apoyo para las líneas equidistantes del pentagrama (GHL)
-function getNoteYPosition(pitch, config, calculatePaddedY)
-    local currentMinP = config.currentMinDisplayPitch
-    local currentMaxP = config.currentMaxDisplayPitch
-    local pitchRangeSize = currentMaxP - currentMinP
-
-    if pitchRangeSize <= 0 then return -1000 end -- Fuera de pantalla
-
-    local targetStave = nil
-    
-    -- Determinar a qué pentagrama pertenece la nota (si pertenece a alguno)
-    -- Usar >= en el primero y <= en el último para incluir los límites
-    if pitch >= config.ghlGuideLines.stave1[1] and pitch <= config.ghlGuideLines.stave1[#config.ghlGuideLines.stave1] then
-        targetStave = config.ghlGuideLines.stave1
-    elseif pitch >= config.ghlGuideLines.stave2[1] and pitch <= config.ghlGuideLines.stave2[#config.ghlGuideLines.stave2] then
-        targetStave = config.ghlGuideLines.stave2
-    end
-
-    -- CASO 1: LA NOTA ESTÁ DENTRO DE UN PENTAGRAMA GUÍA
-    if targetStave then
-        local staveMinPitch = targetStave[1]
-        local staveMaxPitch = targetStave[#targetStave]
-        
-        -- Calcular la posición de la nota como una fracción del rango total de PITCH del pentagrama
-        local pitchSpanInStave = staveMaxPitch - staveMinPitch
-        local notePositionInStave = 0 -- Por defecto, al inicio
-        if pitchSpanInStave > 0 then
-            notePositionInStave = (pitch - staveMinPitch) / pitchSpanInStave
-        end
-        
-        -- Encontrar el "índice fraccional" de la nota...
-        -- Ej: pitch 50 en {43,47,50,53,57} está en el índice 3.0
-        -- Ej: pitch 45 estaría entre índice 1 (43) y 2 (47)
-        local fractional_index = 0
-        for i = 1, #targetStave - 1 do
-            if pitch >= targetStave[i] and pitch < targetStave[i+1] then
-                local lower_p = targetStave[i]
-                local upper_p = targetStave[i+1]
-                local interval_span = upper_p - lower_p
-                local factor = 0
-                if interval_span > 0 then
-                    factor = (pitch - lower_p) / interval_span
-                end
-                fractional_index = (i - 1) + factor
-                break
-            end
-        end
-        if pitch >= targetStave[#targetStave] then
-             fractional_index = #targetStave - 1
-        end
-
-        -- Aplicar la misma lógica visual de drawEquidistantStaff
-        local minNorm = (staveMinPitch - currentMinP) / pitchRangeSize
-        local maxNorm = (staveMaxPitch - currentMinP) / pitchRangeSize
-        
-        local staveTopY = calculatePaddedY(maxNorm) -- Y superior (pitch más alto)
-        local staveBottomY = calculatePaddedY(minNorm) -- Y inferior (pitch más bajo)
-        local staveTotalHeight = staveBottomY - staveTopY
-
-        local numIntervals = #targetStave - 1
-        if numIntervals == 0 then return staveBottomY end -- Evitar división por cero
-
-        -- La posición Y final es una interpolación DENTRO del espacio visual del pentagrama
-        local finalY = staveTopY + (fractional_index / numIntervals) * staveTotalHeight
-        return finalY
-    
-    -- CASO 2: LA NOTA ESTÁ FUERA DE CUALQUIER PENTAGRAMA GUÍA (Fallback)
-    else
-        -- Si una nota está fuera de un pentagrama (ej. en medio de los dos),
-        -- se usa el método antiguo de posicionamiento lineal
-        local normalizedPitch = (pitch - currentMinP) / pitchRangeSize
-        return calculatePaddedY(normalizedPitch)
-    end
-end
-
 -- Función principal del HUD vocal
 function drawLyricsVisualizer()
     if #phrases == 0 then
@@ -1794,45 +1686,49 @@ function drawLyricsVisualizer()
     local currentPhraseObj = phrases[currentPhrase]
     local nextPhraseObj = currentPhrase < #phrases and phrases[currentPhrase + 1] or nil
     
-	-- Solo dibujar el HUD de notas si está activado
-	if showNotesHUD then
-		-- Dibujar fondo para las líneas de notas
-		gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
-		gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
+    -- Solo dibujar el HUD de notas si está activado
+    if showNotesHUD then
+        -- Dibujar fondo para las líneas de notas
+        gfx.r, gfx.g, gfx.b, gfx.a = 0.1, 0.1, 0.15, 0.8
+        gfx.rect(0, noteLineConfig.yOffset - noteLineConfig.areaHeight, gfx.w, noteLineConfig.areaHeight, 1)
 
-		-- Dibujar líneas del PADDING
-		if noteLineConfig.showPaddingLines then
-			local c = noteLineConfig
+        -- Dibujar líneas del PADDING
+        if noteLineConfig.showPaddingLines then
+            local c = noteLineConfig
 
-			-- Establecer el color para las líneas de padding
-			gfx.r, gfx.g, gfx.b, gfx.a = c.paddingLineColor.r, c.paddingLineColor.g, c.paddingLineColor.b, c.paddingLineColor.a
-			
-			-- Calcular la posición Y de la línea SUPERIOR
-			local topLineY = (c.yOffset - c.areaHeight) + (c.pixelMarginTop or 0)
+            -- Establecer el color para las líneas de padding
+            gfx.r, gfx.g, gfx.b, gfx.a = c.paddingLineColor.r, c.paddingLineColor.g, c.paddingLineColor.b, c.paddingLineColor.a
+            
+            -- Calcular la posición Y de la línea SUPERIOR
+            local topLineY = (c.yOffset - c.areaHeight) + (c.pixelMarginTop or 0)
 
-			-- Calcular la posición Y de la línea INFERIOR
-			local bottomLineY = c.yOffset - (c.pixelMarginBottom or 0)
-			
-			-- Grosor del PADDING
-			local thickness = c.paddingLineThickness or 1
-			-- Se calcula el offset para el bucle: Si el grosor es 3, el bucle irá de -1 a 1
-			local offset = math.floor((thickness - 1) / 2) 
+            -- Calcular la posición Y de la línea INFERIOR
+            local bottomLineY = c.yOffset - (c.pixelMarginBottom or 0)
+            
+            -- Grosor del PADDING
+            local thickness = c.paddingLineThickness or 1
+            -- Se calcula el offset para el bucle: Si el grosor es 3, el bucle irá de -1 a 1
+            local offset = math.floor((thickness - 1) / 2) 
 
-			for i = -offset, offset do
-				-- Dibujar ambas líneas con el offset vertical 'i'
-				gfx.line(0, topLineY + i, gfx.w, topLineY + i, 1)
-				gfx.line(0, bottomLineY + i, gfx.w, bottomLineY + i, 1)
-			end
-			
-			-- Restaura el alpha, esto evita que afecte a los demás dibujos
-			gfx.a = 1.0
-		end
+            for i = -offset, offset do
+                -- Dibujar ambas líneas con el offset vertical 'i'
+                gfx.line(0, topLineY + i, gfx.w, topLineY + i, 1)
+                gfx.line(0, bottomLineY + i, gfx.w, bottomLineY + i, 1)
+            end
+            
+            -- Restaura el alpha, esto evita que afecte a los demás dibujos
+            gfx.a = 1.0
+        end
 
         -- Función para dibujar un PENTAGRAMA con espaciado estándar y consistente
         local function drawStandardSpacedStaff(stave, config, calculatePaddedY)
             if not stave or #stave < 2 then
                 return
             end
+
+            -- LEER EL OFFSET (o usar 0 si no está definido)
+            -- La inversión del signo ocurre aquí para que positivo sea arriba.
+            local yOffset = -(config.staffLineYOffset or 0)
 
             -- Calcular el espaciado en píxeles estándar basado en el intervalo de referencia
             local refInterval = config.referencePitchIntervalForSpacing or 3
@@ -1841,10 +1737,11 @@ function drawLyricsVisualizer()
             local pixel_step_y = math.abs(y1 - y2)
 
             -- Anclar el pentagrama usando la posición lineal de su primera nota
-            local anchorY = getLinearYPosition(stave[1], config, calculatePaddedY)
+            -- APLICAR EL OFFSET AL ANCLA
+            local anchorY = getLinearYPosition(stave[1], config, calculatePaddedY) + yOffset
             
             local thickness = config.staffLineThickness or 1
-            local rectY_offset = math.floor(thickness / 2)
+            local rectY_offset = math.floor(thickness / 2)  -- Para centrar la línea
             local clipTopY = (config.yOffset - config.areaHeight) + (config.staffLinePaddingTop or 0)
             local clipBottomY = config.yOffset - (config.staffLinePaddingBottom or 0)
 
@@ -1854,21 +1751,23 @@ function drawLyricsVisualizer()
                 local lineY = anchorY - ((i - 1) * pixel_step_y)
                 
                 if lineY >= clipTopY and lineY <= clipBottomY then
+                    -- Calcular la posición Y del rectángulo considerando el grosor
                     local rectY = lineY - rectY_offset
+                    -- Dibujar la línea como un rectángulo con el grosor especificado
                     gfx.rect(0, rectY, gfx.w, thickness, 1)
                 end
             end
         end
 
-		-- Preparar para dibujar las líneas guía
-		gfx.r, gfx.g, gfx.b = 1.0, 1.0, 1.0
-		gfx.a = noteLineConfig.ghlGuideLineAlpha
-		
-		-- Dibujar ambos pentagramas de forma independiente con la nueva lógica de espaciado estándar
-		drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave1, noteLineConfig, calculatePaddedY)
-		drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave2, noteLineConfig, calculatePaddedY)
+        -- Preparar para dibujar las líneas guía
+        gfx.r, gfx.g, gfx.b = 1.0, 1.0, 1.0
+        gfx.a = noteLineConfig.ghlGuideLineAlpha
+        
+        -- Dibujar ambos pentagramas de forma independiente con la nueva lógica de espaciado estándar
+        drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave1, noteLineConfig, calculatePaddedY)
+        drawStandardSpacedStaff(noteLineConfig.ghlGuideLines.stave2, noteLineConfig, calculatePaddedY)
 
-		gfx.a = 1.0 -- Restaurar alpha para los siguientes dibujos
+        gfx.a = 1.0 -- Restaurar alpha para los siguientes dibujos
 
         -- Efecto Fade vertical para la línea de golpe (como en GHL)
         local c = noteLineConfig
@@ -2069,11 +1968,11 @@ function drawLyricsVisualizer()
                     -- Limitar a la ventana visible
                     local originalStartX = startX  -- Esto guarda el valor original antes de limitarlo
                     local originalEndX = endX
-                    startX = math.max(150, math.min(gfx.w - 20, startX))
-                    endX = math.max(20, math.min(gfx.w - 20, endX))
+                    startX = math.max(150, math.min(gfx.w, startX))
+                    endX = math.max(20, math.min(gfx.w, endX))
                     
                     -- Determinar si esta nota está visible
-                    local isVisible = (endX > 20 and startX < gfx.w - 20)
+                    local isVisible = (endX > 20 and startX < gfx.w)
                     
                     -- Verificar si la nota está tocando la línea de golpeo
                     local isHitting = (originalStartX <= noteLineConfig.hitLineX and originalEndX >= noteLineConfig.hitLineX and lyric.isActive)
@@ -2132,28 +2031,36 @@ function drawLyricsVisualizer()
                             if lyric.pitch == 29 then
                                 -- Nota 29: Dibujar solo un círculo
                                 local circleRadius = noteLineConfig.specialNoteRadius
+                                local yOffset = noteLineConfig.specialNoteYOffset or 0
+                                local finalCircleY = lineY - yOffset -- Restamos para que positivo sea arriba
+
                                 if startX >= noteLineConfig.hitLineX then
-                                    gfx.circle(startX, lineY, circleRadius, 1, 1)
+                                    gfx.circle(startX, finalCircleY, circleRadius, 1, 1)
                                 elseif endX > noteLineConfig.hitLineX then
-                                    gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
+                                    gfx.circle(noteLineConfig.hitLineX, finalCircleY, circleRadius, 1, 1)
                                 end
                             elseif lyric.pitch == 26 or lyric.isToneless then
                                 -- Nota 26: Dibujar círculo al inicio y líneas normales
                                 local circleRadius = noteLineConfig.specialNoteRadius
                                 local noteThickness = noteLineConfig.noteThickness or 1
-                                local yOffset = math.floor(noteThickness / 2)
+                                local yOffsetRect = math.floor(noteThickness / 2)
 
-                                -- Se añade +1 al ancho para cerrar el gap de 1px con los conectores
-                                gfx.rect(visibleStartX, upperLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
-                                gfx.rect(visibleStartX, lowerLineY - yOffset, endX - visibleStartX + 1, noteThickness, 1)
+                                -- Las líneas rectangulares se quedan en su sitio original
+                                gfx.rect(visibleStartX, upperLineY - yOffsetRect, endX - visibleStartX + 1, noteThickness, 1)
+                                gfx.rect(visibleStartX, lowerLineY - yOffsetRect, endX - visibleStartX + 1, noteThickness, 1)
+
+                                -- Calculamos el offset SÓLO para el círculo
+                                local yOffsetCircle = noteLineConfig.specialNoteYOffset or 0
+                                local finalCircleY = lineY - yOffsetCircle -- Restamos para que positivo sea arriba
 
                                 if startX >= noteLineConfig.hitLineX then
-                                    gfx.circle(startX, lineY, circleRadius, 1, 1)
+                                    gfx.circle(startX, finalCircleY, circleRadius, 1, 1)
                                 elseif endX > noteLineConfig.hitLineX then
-                                    gfx.circle(noteLineConfig.hitLineX, lineY, circleRadius, 1, 1)
+                                    gfx.circle(noteLineConfig.hitLineX, finalCircleY, circleRadius, 1, 1)
                                 end
-                                if i == lastNoteIndex and endX < gfx.w - 20 then
-                                    gfx.rect(endX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
+
+                                if i == lastNoteIndex and endX < gfx.w then
+                                    gfx.rect(endX - yOffsetRect, upperLineY - yOffsetRect, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
                             else
                                 -- Notas normales: Dibujar las dos líneas horizontales con grosor configurable
@@ -2167,7 +2074,7 @@ function drawLyricsVisualizer()
                                 if i == firstNoteIndex and visibleStartX == startX then
                                     gfx.rect(startX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
-                                if i == lastNoteIndex and endX < gfx.w - 20 then
+                                if i == lastNoteIndex and endX < gfx.w then
                                     gfx.rect(endX - yOffset, upperLineY - yOffset, noteThickness, (lowerLineY - upperLineY) + noteThickness, 1)
                                 end
                             end
@@ -2232,37 +2139,37 @@ function drawLyricsVisualizer()
             -- Lógica de velocidad en pixeles para las notas
             local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
             
-			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
-			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
-				local phrase = phrases[phraseIndex]
-				if not phrase then
+            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
+            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+                local phrase = phrases[phraseIndex]
+                if not phrase then
                     break
                 end
                 
                 -- Usar opacidad fija para todas las frases
-				local opacity = 0.2
-				
-				for i = 1, #phrase.lyrics - 1 do
-					local currentLyric = phrase.lyrics[i]
-					local nextLyric = phrase.lyrics[i + 1]
-					
-					if currentLyric.pitch and nextLyric.pitch and 
-					   currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
-					   currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
-						
-						local currentLineY
-						if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
-							currentLineY = calculatePaddedY(0.5)
-						else
-							currentLineY = getNoteYPosition(currentLyric.pitch, noteLineConfig, calculatePaddedY)
-						end
-						
-						local nextLineY
-						if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
-							nextLineY = calculatePaddedY(0.5)
-						else
-							nextLineY = getNoteYPosition(nextLyric.pitch, noteLineConfig, calculatePaddedY)
-						end
+                local opacity = 0.2
+                
+                for i = 1, #phrase.lyrics - 1 do
+                    local currentLyric = phrase.lyrics[i]
+                    local nextLyric = phrase.lyrics[i + 1]
+                    
+                    if currentLyric.pitch and nextLyric.pitch and 
+                       currentLyric.pitch > 0 and nextLyric.pitch > 0 and 
+                       currentLyric.pitch ~= HP and nextLyric.pitch ~= HP then
+                        
+                        local currentLineY
+                        if currentLyric.pitch == 26 or currentLyric.pitch == 29 or currentLyric.isToneless then
+                            currentLineY = calculatePaddedY(0.5)
+                        else
+                            currentLineY = getNoteYPosition(currentLyric.pitch, noteLineConfig, calculatePaddedY)
+                        end
+                        
+                        local nextLineY
+                        if nextLyric.pitch == 26 or nextLyric.pitch == 29 or nextLyric.isToneless then
+                            nextLineY = calculatePaddedY(0.5)
+                        else
+                            nextLineY = getNoteYPosition(nextLyric.pitch, noteLineConfig, calculatePaddedY)
+                        end
 
                         -- Define los límites y clampea las posiciones Y de las líneas conectoras
                         local topBoundaryY = (noteLineConfig.yOffset - noteLineConfig.areaHeight) + (noteLineConfig.pixelMarginTop or 0)
@@ -2279,62 +2186,64 @@ function drawLyricsVisualizer()
                         local nextStartX = noteLineConfig.hitLineX + (timeDiffStart * speed)
                         
                         -- Determinar si la conexión es visible (al menos una parte debe estar en el HUD)
-                        local isVisible = (currentEndX < gfx.w - 20 and nextStartX > 20 and currentEndX < nextStartX)
+                        local isVisible = (currentEndX < gfx.w and nextStartX > 20 and currentEndX < nextStartX)
                         
-                        if isVisible then
-                            -- Calcular posiciones "Y" para las líneas superior e inferior
-                            local upperCurrentY = currentLineY - noteLineConfig.linesSpacing/2
-                            local lowerCurrentY = currentLineY + noteLineConfig.linesSpacing/2
-                            local upperNextY = nextLineY - noteLineConfig.linesSpacing/2
-                            local lowerNextY = nextLineY + noteLineConfig.linesSpacing/2
+                         if not nextLyric.originalText:match("^%+") then -- No dibujar si hay una línea conectora "+"
+                            if isVisible then
+                                -- Calcular posiciones "Y" para las líneas superior e inferior
+                                local upperCurrentY = currentLineY - noteLineConfig.linesSpacing/2
+                                local lowerCurrentY = currentLineY + noteLineConfig.linesSpacing/2
+                                local upperNextY = nextLineY - noteLineConfig.linesSpacing/2
+                                local lowerNextY = nextLineY + noteLineConfig.linesSpacing/2
 
-                            if noteLineConfig.noteLineStyle == "offset_top" then
-                                upperCurrentY = upperCurrentY + 1
-                                upperNextY = upperNextY + 1
-                            elseif noteLineConfig.noteLineStyle == "offset_bottom" then
-                                lowerCurrentY = lowerCurrentY + 1
-                                lowerNextY = lowerNextY + 1
-                            end
+                                if noteLineConfig.noteLineStyle == "offset_top" then
+                                    upperCurrentY = upperCurrentY + 1
+                                    upperNextY = upperNextY + 1
+                                elseif noteLineConfig.noteLineStyle == "offset_bottom" then
+                                    lowerCurrentY = lowerCurrentY + 1
+                                    lowerNextY = lowerNextY + 1
+                                end
 
-                            -- Guardar los valores originales de X para los cálculos de interpolación
-                            local originalCurrentEndX = currentEndX
-                            local originalNextStartX = nextStartX
-                            
-                            -- Limitar las posiciones "X" para que no se dibujen a la izquierda de la línea de golpeo (x = 150)
-                            currentEndX = math.max(noteLineConfig.hitLineX, currentEndX)
-                            nextStartX = math.max(noteLineConfig.hitLineX, nextStartX)
-                            
-                            -- Ajustar también para que no se dibujen fuera del HUD
-                            currentEndX = math.min(gfx.w - 20, currentEndX)
-                            nextStartX = math.min(gfx.w - 20, nextStartX)
-                            
-                            -- Si ajustamos currentEndX, interpolar las posiciones Y correspondientes
-                            if currentEndX ~= originalCurrentEndX and originalNextStartX ~= originalCurrentEndX then
-                                local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
-                                local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
-                                upperCurrentY = upperCurrentY + mUpper * (currentEndX - originalCurrentEndX)
-                                lowerCurrentY = lowerCurrentY + mLower * (currentEndX - originalCurrentEndX)
-                            end
-                            
-                            -- Si ajustamos nextStartX, interpolar las posiciones Y correspondientes
-                            if nextStartX ~= originalNextStartX and originalNextStartX ~= originalCurrentEndX then
-                                local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
-                                local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
-                                upperNextY = upperCurrentY + mUpper * (nextStartX - originalCurrentEndX)
-                                lowerNextY = lowerCurrentY + mLower * (nextStartX - originalCurrentEndX)
-                            end
-                            
-                            -- Solo dibujar si las posiciones X son diferentes (evitar líneas verticales)
-                            if currentEndX ~= nextStartX and nextStartX >= noteLineConfig.hitLineX then
-                                local thickness = noteLineConfig.noteThickness or 1
-                                local start_y_offset = -math.floor(thickness / 2)
+                                -- Guardar los valores originales de X para los cálculos de interpolación
+                                local originalCurrentEndX = currentEndX
+                                local originalNextStartX = nextStartX
                                 
-                                gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, opacity
+                                -- Limitar las posiciones "X" para que no se dibujen a la izquierda de la línea de golpeo (x = 150)
+                                currentEndX = math.max(noteLineConfig.hitLineX, currentEndX)
+                                nextStartX = math.max(noteLineConfig.hitLineX, nextStartX)
                                 
-                                for i = 0, thickness - 1 do
-                                    local offset = start_y_offset + i
-                                    gfx.line(currentEndX, upperCurrentY + offset, nextStartX, upperNextY + offset, 1)
-                                    gfx.line(currentEndX, lowerCurrentY + offset, nextStartX, lowerNextY + offset, 1)
+                                -- Ajustar también para que no se dibujen fuera del HUD
+                                currentEndX = math.min(gfx.w, currentEndX)
+                                nextStartX = math.min(gfx.w, nextStartX)
+                                
+                                -- Si ajustamos currentEndX, interpolar las posiciones Y correspondientes
+                                if currentEndX ~= originalCurrentEndX and originalNextStartX ~= originalCurrentEndX then
+                                    local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                    local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                    upperCurrentY = upperCurrentY + mUpper * (currentEndX - originalCurrentEndX)
+                                    lowerCurrentY = lowerCurrentY + mLower * (currentEndX - originalCurrentEndX)
+                                end
+                                
+                                -- Si ajustamos nextStartX, interpolar las posiciones Y correspondientes
+                                if nextStartX ~= originalNextStartX and originalNextStartX ~= originalCurrentEndX then
+                                    local mUpper = (upperNextY - upperCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                    local mLower = (lowerNextY - lowerCurrentY) / (originalNextStartX - originalCurrentEndX)
+                                    upperNextY = upperCurrentY + mUpper * (nextStartX - originalCurrentEndX)
+                                    lowerNextY = lowerCurrentY + mLower * (nextStartX - originalCurrentEndX)
+                                end
+                                
+                                -- Solo dibujar si las posiciones X son diferentes (evitar líneas verticales)
+                                if currentEndX ~= nextStartX and nextStartX >= noteLineConfig.hitLineX then
+                                    local thickness = noteLineConfig.noteThickness or 1
+                                    local start_y_offset = -math.floor(thickness / 2)
+                                    
+                                    gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 1.0, opacity
+                                    
+                                    for i = 0, thickness - 1 do
+                                        local offset = start_y_offset + i
+                                        gfx.line(currentEndX, upperCurrentY + offset, nextStartX, upperNextY + offset, 1)
+                                        gfx.line(currentEndX, lowerCurrentY + offset, nextStartX, lowerNextY + offset, 1)
+                                    end
                                 end
                             end
                         end
@@ -2348,42 +2257,42 @@ function drawLyricsVisualizer()
             -- Lógica de velocidad en pixeles para las notas
             local speed = (noteLineConfig.vocalScrollSpeedBase or 200) * (noteLineConfig.vocalScrollSpeed or 1.0)
 
-			-- Iterar sobre todas las frases visibles (actual + 4 futuras)
-			for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
-				local phrase = phrases[phraseIndex]
-				if not phrase then
+            -- Iterar sobre todas las frases visibles (actual + 4 futuras)
+            for phraseIndex = currentPhrase, math.min(currentPhrase + 4, #phrases) do
+                local phrase = phrases[phraseIndex]
+                if not phrase then
                     break
                 end
-				
-				local opacity = 1.0
-				local prevLyric = nil
-				local prevEndX = nil
-				local prevLineY = nil -- Variable indispensable para el inicio de la línea conectora
-				
-				for i, lyric in ipairs(phrase.lyrics) do
-					if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
-						local lineY
-						if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
-							lineY = calculatePaddedY(0.5)
-						else
-							lineY = getNoteYPosition(lyric.pitch, noteLineConfig, calculatePaddedY)
-						end
-						
+                
+                local opacity = 1.0
+                local prevLyric = nil
+                local prevEndX = nil
+                local prevLineY = nil -- Variable indispensable para el inicio de la línea conectora
+                
+                for i, lyric in ipairs(phrase.lyrics) do
+                    if lyric.pitch and lyric.pitch > 0 and lyric.pitch ~= HP then
+                        local lineY
+                        if lyric.pitch == 26 or lyric.pitch == 29 or lyric.isToneless then
+                            lineY = calculatePaddedY(0.5)
+                        else
+                            lineY = getNoteYPosition(lyric.pitch, noteLineConfig, calculatePaddedY)
+                        end
+                        
                         -- Lógica de velocidad en pixeles para las notas
                         local startTimeSec = reaper.TimeMap2_beatsToTime(0, lyric.startTime)
                         local timeDiffStart = startTimeSec - currentTimeSec
-						local startX = noteLineConfig.hitLineX + (timeDiffStart * speed)
+                        local startX = noteLineConfig.hitLineX + (timeDiffStart * speed)
 
-						if lyric.originalText:match("^%+") and prevLyric then
+                        if lyric.originalText:match("^%+") and prevLyric then
                             -- Lógica de velocidad en pixeles para las notas
                             local prevEndTimeSec = reaper.TimeMap2_beatsToTime(0, prevLyric.endTime)
                             local prevTimeDiffEnd = prevEndTimeSec - currentTimeSec
                             local drawStartX = noteLineConfig.hitLineX + (prevTimeDiffEnd * speed)
 
-							local drawStartY = prevLineY 
-							local drawEndY = lineY
+                            local drawStartY = prevLineY 
+                            local drawEndY = lineY
                             local drawEndX = startX
-                            local isVisible = (drawStartX < gfx.w - 20 and drawEndX > noteLineConfig.hitLineX and drawStartX < drawEndX)
+                            local isVisible = (drawStartX < gfx.w and drawEndX > noteLineConfig.hitLineX and drawStartX < drawEndX)
                             
                             if isVisible then
                                 -- Define los límites y clampea las posiciones Y de las líneas conectoras
@@ -2483,14 +2392,21 @@ function drawLyricsVisualizer()
         
         -- Dibujar el efecto de golpeo si se detectó
         if hitDetected then
-            -- Dibujar círculos de efecto en la línea de golpeo
+            -- LEER EL NUEVO OFFSET DESDE LA CONFIGURACIÓN
+            local yOffset = noteLineConfig.hitCircleYOffset or 0
+            
+            -- CALCULAR LA POSICIÓN Y FINAL
+            -- Restamos el offset para que un valor positivo mueva el círculo hacia arriba
+            local finalHitY = hitY - yOffset
+
+            -- Dibujar círculos de efecto en la línea de golpeo (usando la nueva posición Y)
             gfx.r, gfx.g, gfx.b, gfx.a = noteLineConfig.hitColor.r, noteLineConfig.hitColor.g, noteLineConfig.hitColor.b, 0.7
             local outerRadius = noteLineConfig.hitCircleRadius * 1.5
-            gfx.circle(noteLineConfig.hitLineX, hitY, outerRadius, 0, 1)
+            gfx.circle(noteLineConfig.hitLineX, finalHitY, outerRadius, 0, 1)
             
-            -- Dibujar círculo interno
+            -- Dibujar círculo interno (usando la nueva posición Y)
             gfx.r, gfx.g, gfx.b, gfx.a = 1.0, 1.0, 0.3, 1.0
-            gfx.circle(noteLineConfig.hitLineX, hitY, noteLineConfig.hitCircleRadius, 1, 1)
+            gfx.circle(noteLineConfig.hitLineX, finalHitY, noteLineConfig.hitCircleRadius, 1, 1)
         end
     end
     
@@ -2600,15 +2516,15 @@ function drawLyricsVisualizer()
     -- Dibujar la frase actual con tamaño ajustado
     if currentPhraseObj then
         gfx.r, gfx.g, gfx.b, gfx.a = bgColorLyrics.r, bgColorLyrics.g, bgColorLyrics.b, bgColorLyrics.a
-        gfx.rect(20, visualizerY, gfx.w - 40, lyricsConfig.phraseHeight, 1)
+        gfx.rect(0, visualizerY, gfx.w, lyricsConfig.phraseHeight, 1)
         renderPhrase(currentPhraseObj, lyricsConfig.fontSize.current, visualizerY + 6)
     end
-    
+
     -- Dibujar la próxima frase con tamaño ajustado
     if nextPhraseObj then
         gfx.r, gfx.g, gfx.b, gfx.a = bgColorLyrics.r * 0.8, bgColorLyrics.g * 0.8, bgColorLyrics.b * 0.8, bgColorLyrics.a * 0.8
-        gfx.rect(20, visualizerY + lyricsConfig.phraseHeight + lyricsConfig.phraseSpacing, 
-                 gfx.w - 40, lyricsConfig.phraseHeight, 1)
+        gfx.rect(0, visualizerY + lyricsConfig.phraseHeight + lyricsConfig.phraseSpacing, 
+                 gfx.w, lyricsConfig.phraseHeight, 1)
         renderPhrase(nextPhraseObj, lyricsConfig.fontSize.next, 
                     visualizerY + lyricsConfig.phraseHeight + lyricsConfig.phraseSpacing + 6, 0.9)
     end
@@ -3171,10 +3087,10 @@ function moveCursorByBeats(increment)
     local currentBeats = reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1), currentPosition)
 
     -- Calculate the new position in beats
-	local newBeats = currentBeats + increment
-	newBeats=math.floor(newBeats*(1/quants[movequant])+0.5)/(1/quants[movequant])
+    local newBeats = currentBeats + increment
+    newBeats=math.floor(newBeats*(1/quants[movequant])+0.5)/(1/quants[movequant])
 
-	-- Convert the new beats position to seconds
+    -- Convert the new beats position to seconds
     local newPosition = reaper.TimeMap2_QNToTime(reaper.EnumProjects(-1), newBeats)
 
     -- Move the edit cursor to the new position
@@ -3183,41 +3099,41 @@ end
 
 -- Modificar keyBinds, manteniendo atajos adicionales
 keyBinds={
-	[43]=function()
-		trackSpeed = trackSpeed+0.05
-	end,
-	[61]=function()
-		trackSpeed = trackSpeed+0.05
-	end,
-	[45]=function()
-		if trackSpeed>0.25 then trackSpeed = trackSpeed-0.05 end
-	end,
-	[125]=function()
-		offset = offset+0.01
-	end,
-	[123]=function()
-		offset = offset-0.01
-	end,
-	[32]=function()
-		if reaper.GetPlayState()==1 then
-			reaper.OnStopButton()
-		else
-			reaper.OnPlayButton()
-		end
-	end,
-	[30064]=function()
-		moveCursorByBeats(quants[movequant])
-	end,
-	[1685026670]=function()
-		moveCursorByBeats(-quants[movequant])
-	end,
-	[1818584692.0]=function() 
-		if movequant==1 then movequant=#quants else movequant=movequant-1 end
-	end,
-	[1919379572.0]=function() 
-		if movequant==#quants then movequant=1 else movequant=movequant+1 end
-	end,
-	[26161.0]=function() showHelp = not showHelp end,
+    [43]=function()
+        trackSpeed = trackSpeed+0.05
+    end,
+    [61]=function()
+        trackSpeed = trackSpeed+0.05
+    end,
+    [45]=function()
+        if trackSpeed>0.25 then trackSpeed = trackSpeed-0.05 end
+    end,
+    [125]=function()
+        offset = offset+0.01
+    end,
+    [123]=function()
+        offset = offset-0.01
+    end,
+    [32]=function()
+        if reaper.GetPlayState()==1 then
+            reaper.OnStopButton()
+        else
+            reaper.OnPlayButton()
+        end
+    end,
+    [30064]=function()
+        moveCursorByBeats(quants[movequant])
+    end,
+    [1685026670]=function()
+        moveCursorByBeats(-quants[movequant])
+    end,
+    [1818584692.0]=function() 
+        if movequant==1 then movequant=#quants else movequant=movequant-1 end
+    end,
+    [1919379572.0]=function() 
+        if movequant==#quants then movequant=1 else movequant=movequant+1 end
+    end,
+    [26161.0]=function() showHelp = not showHelp end,
     [76]=function() -- Tecla 'L'
         showLyrics = not showLyrics
         if showLyrics and #phrases == 0 then
@@ -3239,9 +3155,9 @@ keyBinds={
 }
 
 local function Main()
-	imgScale=math.min(gfx.w,gfx.h)/900 -- Zoom del highway y las notas
-	local char = gfx.getchar()
-	
+    imgScale=math.min(gfx.w,gfx.h)/900 -- Zoom del highway y las notas
+    local char = gfx.getchar()
+    
     -- Detectar si hay un proyecto abierto y si ha cambiado
     local hasProject = isProjectOpen()
     local newProject = hasProject and reaper.EnumProjects(-1) or nil
@@ -3259,48 +3175,48 @@ local function Main()
         end
         return -- No hacer nada más hasta que haya un proyecto
     end
-	
-	-- Detectar clic del mouse
-	if gfx.mouse_cap & 1 == 1 then
-		if not mouseDown then
-			mouseDown = true
-			handleMouseClick(gfx.mouse_x, gfx.mouse_y)
-		end
+    
+    -- Detectar clic del mouse
+    if gfx.mouse_cap & 1 == 1 then
+        if not mouseDown then
+            mouseDown = true
+            handleMouseClick(gfx.mouse_x, gfx.mouse_y)
+        end
 
-	else
-		if mouseDown then
-			mouseDown = false
-			handleMouseRelease() -- Añadir esta llamada para apagar los efectos de iluminación
-		end
-	end
+    else
+        if mouseDown then
+            mouseDown = false
+            handleMouseRelease() -- Añadir esta llamada para apagar los efectos de iluminación
+        end
+    end
 
-	
-	if char ~= -1 then
-		reaper.defer(Main)
-	end
-	playState=reaper.GetPlayState()
-	if keyBinds[char] then
+    
+    if char ~= -1 then
+        reaper.defer(Main)
+    end
+    playState=reaper.GetPlayState()
+    if keyBinds[char] then
         keyBinds[char]()
     end
-	
-	if diff<=4 then
-		gfx.blit(1,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale)); 
-	else
-		gfx.blit(0,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale));   
-	end
+    
+    if diff<=4 then
+        gfx.blit(1,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale)); 
+    else
+        gfx.blit(0,imgScale,0,0,0,1024,1024,(gfx.w/2)-(imgScale*399),gfx.h-(676*imgScale));   
+    end
  
-	if playState==1 then
-		curBeat=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetPlayPosition())-offset
-	end
+    if playState==1 then
+        curBeat=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetPlayPosition())-offset
+    end
 
-	curCursorTime=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetCursorPosition())
-	if playState~=1  then
-		curBeat=curCursorTime-offset
-	end
+    curCursorTime=reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1),reaper.GetCursorPosition())
+    if playState~=1  then
+        curBeat=curCursorTime-offset
+    end
 
-	if curCursorTime~=lastCursorTime then
-		lastCursorTime=curCursorTime
-	end
+    if curCursorTime~=lastCursorTime then
+        lastCursorTime=curCursorTime
+    end
     
     -- Verificar cambios en la posición de reproducción para el contador de notas
     local currentPlayPosition = curBeat
@@ -3309,42 +3225,42 @@ local function Main()
     end
     lastPlayPosition = currentPlayPosition
     
-	curNote=1
-	for i=1,#notes do
-		curNote=i
-		if notes[i][1]+notes[i][2]>=curBeat then
-			break
-		end
-	end
+    curNote=1
+    for i=1,#notes do
+        curNote=i
+        if notes[i][1]+notes[i][2]>=curBeat then
+            break
+        end
+    end
 
-	curBeatLine=1
-	for i=1,#beatLines do
-		curBeatLine=i
-		if beatLines[i][1]>=curBeat-2 then
-			break
-		end
-	end
-	
-	-- Usar pcall para las funciones que pueden fallar si cambia el proyecto
-	pcall(function() updateMidi() end)
+    curBeatLine=1
+    for i=1,#beatLines do
+        curBeatLine=i
+        if beatLines[i][1]>=curBeat-2 then
+            break
+        end
+    end
+    
+    -- Usar pcall para las funciones que pueden fallar si cambia el proyecto
+    pcall(function() updateMidi() end)
     
     -- Actualizar letras en tiempo real de forma segura
     if showLyrics then
         pcall(function() updateVocals() end)
     end
-	
-	pcall(function() parseSections() end)
+    
+    pcall(function() parseSections() end)
 
-	if #sections > 0 then
-		updateCurrentSection(curBeat)
-		drawCurrentSection()
-	end
+    if #sections > 0 then
+        updateCurrentSection(curBeat)
+        drawCurrentSection()
+    end
 
-	updateBeatLines()
-	drawBeats()
-	drawNotes()
-	drawNoteCounter()
-	
+    updateBeatLines()
+    drawBeats()
+    drawNotes()
+    drawNoteCounter()
+    
     -- Dibujar visualizador de letras si está activo
     if showLyrics then
         -- Solo mostrar letras si hay un proyecto abierto
@@ -3352,16 +3268,16 @@ local function Main()
             updateAndDrawLyrics()
         end
     end
-	
-	-- Dibujar los botones de dificultad
-	drawDifficultyButtons()
-	
-	-- Dibujar la información principal
-	gfx.r = 0.77
-	gfx.g = 0.81
-	gfx.b = 0.96
-	gfx.x,gfx.y=12,12
-	gfx.setfont(1, "SDK_JP_Web 85W", 25) -- Genshin Impact font
+    
+    -- Dibujar los botones de dificultad
+    drawDifficultyButtons()
+    
+    -- Dibujar la información principal
+    gfx.r = 0.77
+    gfx.g = 0.81
+    gfx.b = 0.96
+    gfx.x,gfx.y=12,12
+    gfx.setfont(1, "SDK_JP_Web 85W", 25) -- Genshin Impact font
 	gfx.drawstr(string.format(
 		[[%s %s
 		Note: %d/%d
@@ -3374,39 +3290,79 @@ local function Main()
 		math.floor(curBeat),  -- Redondea al entero más cercano
 		toFractionString(quants[movequant])
 	))
-	
-	-- Dibujar los controles de velocidad y offset
-	drawSpeedControls()
-	drawOffsetControls()
+    
+    -- Dibujar los controles de velocidad y offset
+    drawSpeedControls()
+    drawOffsetControls()
     
     -- Dibujar botón de activar/desactivar letras
     drawLyricsToggleButton()
     
     -- Dibujar botón de activar/desactivar HUD de notas
     drawNotesHUDToggleButton()
-	
-	gfx.x,gfx.y=5,gfx.h-20
-	gfx.setfont(1, "SDK_JP_Web 85W", 15) -- Genshin Impact font
-	gfx.drawstr(string.format("Version %s",version_num))
-	strx,stry=gfx.measurestr("F1: Controls")
-	gfx.x,gfx.y=gfx.w-strx-5,gfx.h-stry-5
-	gfx.drawstr("F1: Controls")
-	if showHelp then
-		gfx.mode=0
-		gfx.r,gfx.g,gfx.b,gfx.a=0,0,0,0.75
-		gfx.rect(0,0,gfx.w,gfx.h)
-		gfx.r,gfx.g,gfx.b,gfx.a=1,1,1,1
-		gfx.x,gfx.y=0,320*imgScale
-		gfx.drawstr([[Keybinds
-		 
-		Change highway speed: + | -
-		Change offset: { | } (Shift + [ | ])
-		Change snap: Left (<-) | Right (->) arrows
-		Scroll: Up | Down arrows
+    
+    gfx.x,gfx.y=5,gfx.h-20
+    gfx.setfont(1, "SDK_JP_Web 85W", 15) -- Genshin Impact font
+    gfx.drawstr(string.format("Version %s",version_num))
+
+    -- RELOJ MONOESPACIADO (GHL)
+    -- EL texto "Time"
+    local titleString = "Time:"
+    local titleW, titleH = gfx.measurestr(titleString)
+    gfx.x = (gfx.w - titleW) / 2
+    gfx.y = gfx.h - 35
+    gfx.drawstr(titleString)
+
+    -- El Valor del Tiempo con espaciado fijo (GHL)
+    local totalSeconds = reaper.TimeMap2_beatsToTime(0, curBeat)
+    local timeString = string.format("%.3fs", totalSeconds)
+
+    -- Define el ancho fijo para cada carácter del reloj
+    -- Valor ajustable por si se cambia el tamaño de la fuente
+    local charWidth = 9
+    
+    -- Calcula el ancho total del bloque de tiempo
+    local totalBlockWidth = #timeString * charWidth
+
+    -- Calcula la posición X de inicio para centrar el bloque completo
+    local startX = (gfx.w - totalBlockWidth) / 2
+    local timeY = gfx.h - 20
+
+    -- Esto dibujar cada carácter del reloj, uno por uno
+    for i = 1, #timeString do
+        local char = timeString:sub(i, i)
+        
+        -- Mide el ancho del carácter actual para centrarlo dentro de su espaciado
+        local singleCharW, _ = gfx.measurestr(char)
+
+        -- Calcula la posición X del espaciado para este carácter
+        local boxX = startX + ((i - 1) * charWidth)
+
+        -- Ajusta la posición X para centrar el carácter dentro de su espaciado
+        gfx.x = boxX + (charWidth - singleCharW) / 2
+        gfx.y = timeY
+        
+        gfx.drawstr(char)
+    end
+    strx,stry=gfx.measurestr("F1: Controls")
+    gfx.x,gfx.y=gfx.w-strx-5,gfx.h-stry-5
+    gfx.drawstr("F1: Controls")
+    if showHelp then
+        gfx.mode=0
+        gfx.r,gfx.g,gfx.b,gfx.a=0,0,0,0.75
+        gfx.rect(0,0,gfx.w,gfx.h)
+        gfx.r,gfx.g,gfx.b,gfx.a=1,1,1,1
+        gfx.x,gfx.y=0,320*imgScale
+        gfx.drawstr([[Keybinds
+         
+        Change highway speed: + | -
+        Change offset: { | } (Shift + [ | ])
+        Change snap: Left (<-) | Right (->) arrows
+        Scroll: Up | Down arrows
         Show/Hide Lyrics: L
-		]],1,gfx.w,gfx.h)
-	end
-	gfx.update()
+        ]],1,gfx.w,gfx.h)
+    end
+    gfx.update()
 end
 
 Main()
